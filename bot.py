@@ -18,7 +18,7 @@ bot=discord.Bot(intents=intents)
 @bot.event
 async def on_ready():
     print(f"{bot.user} has logged in!")
-    auto_volt.start()
+    auto_leaderboard.start()
 
 @bot.event
 async def on_message(message):
@@ -28,7 +28,7 @@ async def on_message(message):
         #print(f"{message.author.name} said {message.content}")
        
 @tasks.loop(minutes=1)
-async def auto_volt():
+async def auto_leaderboard():
     
 
     destination_channel_id=1118501021195456572 #Terminal 2
@@ -56,7 +56,7 @@ async def auto_volt():
                 if not message.author.bot:
                     count_messages_by_members[message.author]+=1
         except Exception as e:
-            print(e)
+            #print(e)
             continue
     
     
@@ -70,24 +70,48 @@ async def auto_volt():
     )
     #ID of High Voltage 873517967982362674
     #top_ten=c.most_common()
-    print(top_ten)
-    
+    #print(top_ten)
+    top_ten_list=[]
     embed_content=""
     for idx,i in enumerate(top_ten):
             #embed.add_field(name=f"{idx}",value=f"{ {i[0].name}}")
+            top_ten_list.append(i[0].id)
             embed_content=embed_content+f"{idx}. {i[0].name}• {i[1]} messages\n"
-    
+    print(top_ten_list)
     embed.add_field(name="Leaderboard",value=embed_content)
     await destination_channel.send(
         embed=embed
     )
+    mr_electricity_role_id=1108079835265376426
+    mr_electricity_role=discord.utils.get(guild.roles,id=mr_electricity_role_id)
+    high_voltage_role_id=873517967982362674
+    high_voltage_role=discord.utils.get(guild.roles,id=high_voltage_role_id)
+    high_voltage_members=high_voltage_role.members
+
+    for member in high_voltage_members:
+        if member.id not in top_ten_list:
+            await member.remove_roles(high_voltage_role)
     
+    admin_roles_id=[1116013925574651975,880229392599617606,997834090797596763]
+
+    print(high_voltage_members)
+    for new_member_id in top_ten_list:
+        print("for ",str(new_member_id))
+        mr_electricity_flag=True
+        member=guild.get_member(new_member_id)
+        print("for ",str(member.name))
+        await member.add_roles(high_voltage_role)
+        member_roles=member.roles
+        has_any_admin_role=any(role.id in admin_roles_id for role in member_roles)
+
+        if not has_any_admin_role and mr_electricity_flag:
+            await member.add_roles(mr_electricity_role)
+            mr_electricity_flag=False
+
+
+
+
     
-
-
-
-
-
      
 
 @bot.command()
