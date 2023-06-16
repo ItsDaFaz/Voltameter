@@ -11,6 +11,7 @@ intents.typing = False
 intents.presences = False
 #intents.message_content=True
 intents.guild_messages=True
+intents.members=True
 bot=discord.Bot(intents=intents)
 
 
@@ -27,7 +28,7 @@ async def on_message(message):
         #print(f"{message.author} has sent a message")
         #print(f"{message.author.name} said {message.content}")
        
-@tasks.loop(minutes=1)
+@tasks.loop(minutes=5)
 async def auto_leaderboard():
     
 
@@ -93,20 +94,24 @@ async def auto_leaderboard():
             await member.remove_roles(high_voltage_role)
     
     admin_roles_id=[1116013925574651975,880229392599617606,997834090797596763]
-
+    mr_electricity_flag=True
     print(high_voltage_members)
     for new_member_id in top_ten_list:
-        print("for ",str(new_member_id))
-        mr_electricity_flag=True
-        member=guild.get_member(new_member_id)
-        print("for ",str(member.name))
-        await member.add_roles(high_voltage_role)
-        member_roles=member.roles
-        has_any_admin_role=any(role.id in admin_roles_id for role in member_roles)
+        try:
+            print("for ",str(new_member_id))
+           
+            member=await guild.fetch_member(new_member_id)
+            print("for ",str(member))
+            await member.add_roles(high_voltage_role)
+            member_roles=member.roles
+            has_any_admin_role=any(role.id in admin_roles_id for role in member_roles)
 
-        if not has_any_admin_role and mr_electricity_flag:
-            await member.add_roles(mr_electricity_role)
-            mr_electricity_flag=False
+            if has_any_admin_role==False and mr_electricity_flag==True:
+                await member.add_roles(mr_electricity_role)
+                print("Awarded Mr. Electricity to",member.name)
+                mr_electricity_flag=False
+        except:
+            continue
 
 
 
