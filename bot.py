@@ -1,179 +1,227 @@
 from config import TOKEN
 from discord.ext import tasks
-import os
 import discord
 from collections import Counter
 from datetime import datetime, timedelta
+from typing import Optional, List, cast
+from discord import Guild, TextChannel, Role, Member, Message, Embed, Color, User, Thread
 
-intents=discord.Intents.default()
-intents.messages=True
+intents = discord.Intents.default()
+intents.messages = True
 intents.typing = False
 intents.presences = False
-#intents.message_content=True
-intents.guild_messages=True
-intents.members=True
-bot=discord.Bot(intents=intents)
+intents.message_content = True  # This is needed for message content
+intents.guild_messages = True
+intents.members = True
+EMBED_TITLE="High Voltage Leaderboard"
+EMBED_COLOR="#FF4242"
+EMBED_DESCRIPTION="Most active HLB members are listed below. The board is refreshed every 5 minutes. The staff members are not eligible for High Voltage ranking. This is only for the regular HLB members."
+class VoltameterClient(discord.Client):
+    def __init__(self):
+        super().__init__(intents=intents)
+        self.tree = discord.app_commands.CommandTree(self)
 
+    async def setup_hook(self):
+        await self.tree.sync()
 
+client = VoltameterClient()
 
-@bot.event
+@client.event
 async def on_ready():
-    print(f"{bot.user} has logged in!")
+    print(f"{client.user} has logged in!")
     auto_leaderboard.start()
 
-@bot.event
+@client.event
 async def on_message(message):
-    if(message.author.id!=1117105897710305330):
+    if message.author.id != 1117105897710305330:
         pass
-        #print(f"{message.author} has sent a message")
-        #print(f"{message.author.name} said {message.content}")
-       
+
+
 @tasks.loop(minutes=5)
 async def auto_leaderboard():
-    
+    # Constants
+    DESTINATION_CHANNEL_ID: int = 1118501021195456572  # Terminal 2
+    GUILD_ID: int = 636532413744414731  # HLB
+    MR_ELECTRICITY_ROLE_ID: int = 1108079835265376426
+    HIGH_VOLTAGE_ROLE_ID: int = 873517967982362674
+    ADMIN_ROLES_IDS: List[int] = [
+        1116013925574651975, 880229392599617606, 997834090797596763,
+        825058100272168991, 816667480196907009, 878528169597104138
+    ]
 
-    destination_channel_id=1118501021195456572 #Terminal 2
-    guild_id=636532413744414731 #HLB
-    guild=bot.get_guild(guild_id)
-    destination_channel=bot.get_channel(destination_channel_id)
+    # Guild validation
+    guild: Optional[Guild] = client.get_guild(GUILD_ID)
+    if not guild:
+        print(f"Could not find guild with ID {GUILD_ID}")
+        return
 
-    bot_user = bot.user
+    # Channel or thread validation
+    try:
+        destination_channel = await client.fetch_channel(DESTINATION_CHANNEL_ID)
+    except discord.NotFound:
+        print(f"Channel {DESTINATION_CHANNEL_ID} was not found")
+        return
+    except discord.Forbidden:
+        print(f"Bot does not have permission to access channel {DESTINATION_CHANNEL_ID}")
+        return
+    except discord.HTTPException as e:
+        print(f"HTTP error while fetching channel: {e}")
+        return
 
-    messages = await destination_channel.history(limit=None).flatten()
-    for message in messages:
-        if message.author == bot_user:
-            await message.delete()
+    print(destination_channel)
 
+    if not isinstance(destination_channel, (TextChannel, Thread)):
+        print(f"Channel {DESTINATION_CHANNEL_ID} is not a text channel or thread.")
+        return
+
+    # Bot user validation
+    bot_user: Optional[discord.ClientUser] = client.user
+    if not bot_user:
+        print("Bot user is not initialized")
+        return
+
+    # Delete previous bot messages
+    try:
+        messages: List[Message] = []
+        async for message in destination_channel.history(limit=None):
+            messages.append(message)
+            if message.author == bot_user:
+                await message.delete()
+    except Exception as e:
+        print(f"Error cleaning previous messages: {e}")
+
+    # Message counting
     seven_days_ago = datetime.utcnow() - timedelta(days=7)
-    channels=guild.text_channels
-    count_messages_by_members=Counter()
-    
-    
-    for channel in channels:
+    text_channels: List[TextChannel] = [
+        channel for channel in guild.channels
+        if isinstance(channel, TextChannel)
+    ]
+    count_messages_by_members = Counter()
+
+    for channel in text_channels:
         try:
-            messages=await channel.history(limit=None, after=seven_days_ago).flatten() 
-            #async for message in ctx.channel.history(limit=None,after=seven_days_ago):
-            for message in messages:
-                if not message.author.bot:
-                    count_messages_by_members[message.author]+=1
+            channel_messages = []
+            async for message in channel.history(limit=None, after=seven_days_ago):
+                channel_messages.append(message)
+                if message.author and not message.author.bot:
+                    count_messages_by_members[message.author] += 1
         except Exception as e:
-            #print(e)
+            print(f"Error processing channel {channel.name}: {e}")
             continue
-    
-    
 
-    top_ten=count_messages_by_members.most_common(10)
-    embed=discord.Embed(
-            title="The Top Ten",
-            description="The top ten members with most messages sent",
-            color=discord.Color.from_rgb(206, 255, 0)
-            #rgb(206, 255, 0)
-    )
-    #ID of High Voltage 873517967982362674
-    #top_ten=c.most_common()
-    #print(top_ten)
-    top_ten_list=[]
-    embed_content=""
-    for idx,i in enumerate(top_ten):
-            #embed.add_field(name=f"{idx}",value=f"{ {i[0].name}}")
-            top_ten_list.append(i[0].id)
-            embed_content=embed_content+f"{idx}. {i[0].name}• {i[1]} messages\n"
-    print(top_ten_list)
-    embed.add_field(name="Leaderboard",value=embed_content)
-    await destination_channel.send(
-        embed=embed
-    )
-    mr_electricity_role_id=1108079835265376426
-    mr_electricity_role=discord.utils.get(guild.roles,id=mr_electricity_role_id)
-    high_voltage_role_id=873517967982362674
-    high_voltage_role=discord.utils.get(guild.roles,id=high_voltage_role_id)
-    high_voltage_members=high_voltage_role.members
+    # Filter out admin members and get top ten
+    non_admin_messages = {}
+    for member, count in count_messages_by_members.items():
+        if isinstance(member, Member):
+            member_role_ids = {role.id for role in member.roles}
+            if not member_role_ids.intersection(ADMIN_ROLES_IDS):
+                non_admin_messages[member] = count
 
+    top_ten = Counter(non_admin_messages).most_common(10)
+    if not top_ten:
+        print("No non-admin messages found in the last 7 days")
+        return
+
+    # Create embed
+    embed = Embed(
+        title=EMBED_TITLE,
+        description=EMBED_DESCRIPTION,
+        color=Color.from_rgb(255, 66, 66)
+    )
+
+    top_ten_list: List[int] = []
+    embed_content = ""
+    for idx, (member, count) in enumerate(top_ten):
+        if isinstance(member, Member):
+            top_ten_list.append(member.id)
+            embed_content += f"{idx}. {member.name} • {count} messages\n"
+
+    if not embed_content:
+        print("No valid non-admin members found in top ten")
+        return
+
+    embed.add_field(name="", value=embed_content)
+    embed.set_footer(text="© Codebound")
+    await destination_channel.send(embed=embed)
+
+    # Role management
+    mr_electricity_role: Optional[Role] = discord.utils.get(guild.roles, id=MR_ELECTRICITY_ROLE_ID)
+    high_voltage_role: Optional[Role] = discord.utils.get(guild.roles, id=HIGH_VOLTAGE_ROLE_ID)
+
+    if not high_voltage_role or not mr_electricity_role:
+        print("Required roles not found")
+        return
+
+    # Remove roles from members no longer in top ten
+    high_voltage_members = high_voltage_role.members
     for member in high_voltage_members:
         if member.id not in top_ten_list:
-            await member.remove_roles(high_voltage_role)
-    
-    admin_roles_id=[1116013925574651975,880229392599617606,997834090797596763]
-    mr_electricity_flag=True
-    print(high_voltage_members)
-    for new_member_id in top_ten_list:
-        try:
-            print("for ",str(new_member_id))
-           
-            member=await guild.fetch_member(new_member_id)
-            print("for ",str(member))
-            await member.add_roles(high_voltage_role)
-            member_roles=member.roles
-            has_any_admin_role=any(role.id in admin_roles_id for role in member_roles)
+            try:
+                await member.remove_roles(high_voltage_role)
+            except Exception as e:
+                print(f"Error removing role from {member.name}: {e}")
 
-            if has_any_admin_role==False and mr_electricity_flag==True:
+    # Add roles to new top ten members
+    mr_electricity_flag = True
+    for member_id in top_ten_list:
+        try:
+            member: Optional[Member] = await guild.fetch_member(member_id)
+            if not member:
+                continue
+
+            await member.add_roles(high_voltage_role)
+
+            # Check for admin roles
+            member_role_ids = {role.id for role in member.roles}
+            has_admin_role = bool(member_role_ids.intersection(ADMIN_ROLES_IDS))
+
+            if not has_admin_role and mr_electricity_flag:
                 await member.add_roles(mr_electricity_role)
-                print("Awarded Mr. Electricity to",member.name)
-                mr_electricity_flag=False
-        except:
+                print(f"Awarded Mr. Electricity to {member.name}")
+                mr_electricity_flag = False
+
+        except Exception as e:
+            print(f"Error handling member {member_id}: {e}")
             continue
 
 
+@client.tree.command(name="voltage", description="Show voltage leaderboard")
+async def voltage(interaction: discord.Interaction):
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    guild = interaction.guild
+    if not guild:
+        await interaction.response.send_message("This command can only be used in a guild/server")
+        return
 
+    channels = [channel for channel in guild.channels if isinstance(channel, discord.TextChannel)]
+    count_messages_by_members = Counter()
 
-    
-     
+    await interaction.response.defer()
 
-@bot.command()
-async def voltage(ctx):
-        
-        
-        seven_days_ago = datetime.utcnow() - timedelta(days=7)
-        guild=ctx.guild
-        channels=guild.text_channels    
-        count_messages_by_members=Counter()
-        
-        await ctx.defer()
-        for channel in channels:
-            try:
-                messages=await channel.history(limit=None, after=seven_days_ago).flatten() 
-                #async for message in ctx.channel.history(limit=None,after=seven_days_ago):
-                for message in messages:
-                    if not message.author.bot:
-                        count_messages_by_members[message.author]+=1
-            except Exception as e:
-                print(e)
-                continue
-        
-        
+    for channel in channels:
+        try:
+            messages = []
+            async for message in channel.history(limit=None, after=seven_days_ago):
+                messages.append(message)
+                if not message.author.bot:
+                    count_messages_by_members[message.author] += 1
+        except Exception as e:
+            print(f"Error in channel {channel.name}: {e}")
+            continue
 
-        top_ten=count_messages_by_members.most_common(10)
-        embed=discord.Embed(
-             title="The Top Ten",
-             description="The top ten members with most messages sent",
-             color=discord.Color.from_rgb(206, 255, 0)
-             #rgb(206, 255, 0)
-        )
-        #ID of High Voltage 873517967982362674
-        #top_ten=c.most_common()
-        print(top_ten)
-        
-        embed_content=""
-        for idx,i in enumerate(top_ten):
-             #embed.add_field(name=f"{idx}",value=f"{ {i[0].name}}")
-             embed_content=embed_content+f"{idx}. {i[0].name}• {i[1]} messages\n"
-        
-        embed.add_field(name="Leaderboard",value=embed_content)
-        
-        await ctx.respond(
-            embed=embed
-        )
+    top_ten = count_messages_by_members.most_common(10)
+    embed = discord.Embed(
+        title=EMBED_TITLE,
+        description=EMBED_DESCRIPTION,
+        color=discord.Color.from_rgb(255, 66, 66)
+    )
 
+    embed_content = ""
+    for idx, i in enumerate(top_ten):
+        embed_content = embed_content + f"{idx}. {i[0].name}• {i[1]} messages\n"
 
+    embed.add_field(name="Leaderboard", value=embed_content)
 
-# cogfiles=[
-#     f"cogs.{filename[:-3]}" for filename in os.listdir("./cogs/") if filename.endswith(".py")
-# ]
+    await interaction.followup.send(embed=embed)
 
-# for cogfile in cogfiles:
-#     try:
-#         bot.load_extension(cogfile)
-#     except Exception as e:
-#         print(e)
-
-bot.run(TOKEN)
+client.run(TOKEN)
