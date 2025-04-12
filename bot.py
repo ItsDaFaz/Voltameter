@@ -7,6 +7,22 @@ from typing import Optional, List, cast
 from discord import Guild, TextChannel, Role, Member, Message, Embed, Color, User, Thread
 from dotenv import load_dotenv
 import os
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+class DummyHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b'Bot is running!')
+
+def run_http_server():
+    server_address = ('0.0.0.0', 8080)
+    httpd = HTTPServer(server_address, DummyHandler)
+    httpd.serve_forever()
+
+# Start the dummy server in a separate thread
+threading.Thread(target=run_http_server, daemon=True).start()
 
 load_dotenv()
 TOKEN=os.getenv("TOKEN")
