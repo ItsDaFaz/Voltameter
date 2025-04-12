@@ -92,15 +92,7 @@ async def auto_leaderboard():
         print("Bot user is not initialized")
         return
 
-    # Delete previous bot messages
-    try:
-        messages: List[Message] = []
-        async for message in destination_channel.history(limit=None):
-            messages.append(message)
-            if message.author == bot_user:
-                await message.delete()
-    except Exception as e:
-        print(f"Error cleaning previous messages: {e}")
+
 
     # Message counting
     seven_days_ago = datetime.utcnow() - timedelta(days=7)
@@ -151,6 +143,16 @@ async def auto_leaderboard():
     if not embed_content:
         print("No valid non-admin members found in top ten")
         return
+
+    # Delete previous bot messages
+    try:
+        messages: List[Message] = []
+        async for message in destination_channel.history(limit=None):
+            messages.append(message)
+            if message.author == bot_user:
+                await message.delete()
+    except Exception as e:
+        print(f"Error cleaning previous messages: {e}")
 
     embed.add_field(name="", value=embed_content)
     embed.set_footer(text="© Codebound")
