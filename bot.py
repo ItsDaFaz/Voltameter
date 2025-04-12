@@ -1,11 +1,15 @@
-from config import TOKEN
+from config import *
 from discord.ext import tasks
 import discord
 from collections import Counter
 from datetime import datetime, timedelta
 from typing import Optional, List, cast
 from discord import Guild, TextChannel, Role, Member, Message, Embed, Color, User, Thread
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
+TOKEN=os.getenv("TOKEN")
 intents = discord.Intents.default()
 intents.messages = True
 intents.typing = False
@@ -40,14 +44,7 @@ async def on_message(message):
 @tasks.loop(minutes=5)
 async def auto_leaderboard():
     # Constants
-    DESTINATION_CHANNEL_ID: int = 1118501021195456572  # Terminal 2
-    GUILD_ID: int = 636532413744414731  # HLB
-    MR_ELECTRICITY_ROLE_ID: int = 1108079835265376426
-    HIGH_VOLTAGE_ROLE_ID: int = 873517967982362674
-    ADMIN_ROLES_IDS: List[int] = [
-        1116013925574651975, 880229392599617606, 997834090797596763,
-        825058100272168991, 816667480196907009, 878528169597104138
-    ]
+
 
     # Guild validation
     guild: Optional[Guild] = client.get_guild(GUILD_ID)
@@ -224,4 +221,7 @@ async def voltage(interaction: discord.Interaction):
 
     await interaction.followup.send(embed=embed)
 
-client.run(TOKEN)
+if isinstance(TOKEN,str):
+    client.run(TOKEN)
+else:
+    print("TOKEN is required to run the bot")
