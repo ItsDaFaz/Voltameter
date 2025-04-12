@@ -9,20 +9,19 @@ from dotenv import load_dotenv
 import os
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from flask import Flask
 
-class DummyHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b'Bot is running!')
+app = Flask(__name__)
 
-def run_http_server():
-    server_address = ('0.0.0.0', 8080)
-    httpd = HTTPServer(server_address, DummyHandler)
-    httpd.serve_forever()
+@app.route('/')
+def index():
+    return "Bot is running!"
 
-# Start the dummy server in a separate thread
-threading.Thread(target=run_http_server, daemon=True).start()
+def run_web():
+    app.run(host='0.0.0.0', port=8080)
+
+# Run the web server in a separate thread
+threading.Thread(target=run_web).start()
 
 load_dotenv()
 TOKEN=os.getenv("TOKEN")
