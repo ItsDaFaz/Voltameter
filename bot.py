@@ -256,6 +256,7 @@ async def voltage(interaction: discord.Interaction):
 
 
     embed.add_field(name="", value=embed_content)
+    embed.set_footer(text="© Codebound")
 
     await interaction.followup.send(embed=embed)
 
