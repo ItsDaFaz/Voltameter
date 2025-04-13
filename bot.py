@@ -223,18 +223,39 @@ async def voltage(interaction: discord.Interaction):
             print(f"Error in channel {channel.name}: {e}")
             continue
 
-    top_ten = count_messages_by_members.most_common(10)
-    embed = discord.Embed(
+    # Filter out admin members and get top ten
+    non_admin_messages = {}
+    for member, count in count_messages_by_members.items():
+        if isinstance(member, Member):
+            member_role_ids = {role.id for role in member.roles}
+            if not member_role_ids.intersection(ADMIN_ROLES_IDS):
+                non_admin_messages[member] = count
+
+    top_ten = Counter(non_admin_messages).most_common(10)
+    if not top_ten:
+        print("No non-admin messages found in the last 7 days")
+        return
+
+    # Create embed
+    embed = Embed(
         title=EMBED_TITLE,
         description=EMBED_DESCRIPTION,
-        color=discord.Color.from_rgb(255, 66, 66)
+        color=Color.from_rgb(255, 66, 66)
     )
 
+    top_ten_list: List[int] = []
     embed_content = ""
-    for idx, i in enumerate(top_ten):
-        embed_content = embed_content + f"{idx}. {i[0].name}• {i[1]} messages\n"
+    for idx, (member, count) in enumerate(top_ten):
+        if isinstance(member, Member):
+            top_ten_list.append(member.id)
+            embed_content += f"{idx}. {member.name} • {count} messages\n"
 
-    embed.add_field(name="Leaderboard", value=embed_content)
+    if not embed_content:
+        print("No valid non-admin members found in top ten")
+        return
+
+
+    embed.add_field(name="", value=embed_content)
 
     await interaction.followup.send(embed=embed)
 
