@@ -1,14 +1,13 @@
-from config import *
+from config import DESTINATION_CHANNEL_ID,GUILD_ID,MR_ELECTRICITY_ROLE_ID,HIGH_VOLTAGE_ROLE_ID,ADMIN_ROLES_IDS
 from discord.ext import tasks
 import discord
 from collections import Counter
 from datetime import datetime, timedelta
-from typing import Optional, List, cast
-from discord import Guild, TextChannel, Role, Member, Message, Embed, Color, User, Thread
+from typing import Optional, List
+from discord import Guild, TextChannel, Role, Member, Embed, Color, Thread
 from dotenv import load_dotenv
 import os
 import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
 from flask import Flask
 
 app = Flask(__name__)
@@ -55,19 +54,62 @@ async def on_message(message):
     if message.author.id != 1117105897710305330:
         pass
 
+async def generate_leaderboard_embed(guild: Guild):
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    text_channels: List[TextChannel] = [
+        channel for channel in guild.channels
+        if isinstance(channel, TextChannel)
+    ]
+    count_messages_by_members = Counter()
+
+    for channel in text_channels:
+        try:
+            async for message in channel.history(limit=None, after=seven_days_ago):
+                if message.author and not message.author.bot:
+                    count_messages_by_members[message.author] += 1
+        except Exception as e:
+            print(f"Error processing channel {channel.name}: {e}")
+            continue
+
+    # Filter out admin members and get top ten
+    non_admin_messages = {
+        member: count for member, count in count_messages_by_members.items()
+        if isinstance(member, Member) and not {role.id for role in member.roles}.intersection(ADMIN_ROLES_IDS)
+    }
+
+    top_ten = Counter(non_admin_messages).most_common(10)
+
+    embed = Embed(
+        title=EMBED_TITLE,
+        description=EMBED_DESCRIPTION,
+        color=Color.from_rgb(255, 66, 66)
+    )
+
+    embed_content = ""
+    top_ten_list = []
+
+    for idx, (member, count) in enumerate(top_ten):
+        if isinstance(member, Member):
+            embed_content += f"{idx}. {member.name} • {count} messages\n"
+            top_ten_list.append(member.id)
+
+    if not embed_content:
+        return None, []
+
+    embed.add_field(name="", value=embed_content)
+    embed.set_footer(text="© Codebound")
+
+    return embed, top_ten_list
+
+
 
 @tasks.loop(minutes=5)
 async def auto_leaderboard():
-    # Constants
-
-
-    # Guild validation
     guild: Optional[Guild] = client.get_guild(GUILD_ID)
     if not guild:
         print(f"Could not find guild with ID {GUILD_ID}")
         return
 
-    # Channel or thread validation
     try:
         destination_channel = await client.fetch_channel(DESTINATION_CHANNEL_ID)
     except discord.NotFound:
@@ -80,82 +122,30 @@ async def auto_leaderboard():
         print(f"HTTP error while fetching channel: {e}")
         return
 
-    print(destination_channel)
-
     if not isinstance(destination_channel, (TextChannel, Thread)):
         print(f"Channel {DESTINATION_CHANNEL_ID} is not a text channel or thread.")
         return
 
-    # Bot user validation
     bot_user: Optional[discord.ClientUser] = client.user
     if not bot_user:
         print("Bot user is not initialized")
         return
 
+    embed, top_ten_list = await generate_leaderboard_embed(guild)
 
-
-    # Message counting
-    seven_days_ago = datetime.utcnow() - timedelta(days=7)
-    text_channels: List[TextChannel] = [
-        channel for channel in guild.channels
-        if isinstance(channel, TextChannel)
-    ]
-    count_messages_by_members = Counter()
-
-    for channel in text_channels:
-        try:
-            channel_messages = []
-            async for message in channel.history(limit=None, after=seven_days_ago):
-                channel_messages.append(message)
-                if message.author and not message.author.bot:
-                    count_messages_by_members[message.author] += 1
-        except Exception as e:
-            print(f"Error processing channel {channel.name}: {e}")
-            continue
-
-    # Filter out admin members and get top ten
-    non_admin_messages = {}
-    for member, count in count_messages_by_members.items():
-        if isinstance(member, Member):
-            member_role_ids = {role.id for role in member.roles}
-            if not member_role_ids.intersection(ADMIN_ROLES_IDS):
-                non_admin_messages[member] = count
-
-    top_ten = Counter(non_admin_messages).most_common(10)
-    if not top_ten:
-        print("No non-admin messages found in the last 7 days")
+    if not embed:
+        print("No valid non-admin members found for leaderboard")
         return
 
-    # Create embed
-    embed = Embed(
-        title=EMBED_TITLE,
-        description=EMBED_DESCRIPTION,
-        color=Color.from_rgb(255, 66, 66)
-    )
-
-    top_ten_list: List[int] = []
-    embed_content = ""
-    for idx, (member, count) in enumerate(top_ten):
-        if isinstance(member, Member):
-            top_ten_list.append(member.id)
-            embed_content += f"{idx}. {member.name} • {count} messages\n"
-
-    if not embed_content:
-        print("No valid non-admin members found in top ten")
-        return
-
-    # Delete previous bot messages
+    # Clean previous bot messages
     try:
-        messages: List[Message] = []
         async for message in destination_channel.history(limit=None):
-            messages.append(message)
             if message.author == bot_user:
                 await message.delete()
     except Exception as e:
         print(f"Error cleaning previous messages: {e}")
 
-    embed.add_field(name="", value=embed_content)
-    embed.set_footer(text="© Codebound")
+    # Send the new leaderboard
     await destination_channel.send(embed=embed)
 
     # Role management
@@ -166,37 +156,32 @@ async def auto_leaderboard():
         print("Required roles not found")
         return
 
-    # Remove roles from members no longer in top ten
-    high_voltage_members = high_voltage_role.members
-    for member in high_voltage_members:
+    # Remove roles from users no longer in top 10
+    for member in high_voltage_role.members:
         if member.id not in top_ten_list:
             try:
                 await member.remove_roles(high_voltage_role)
             except Exception as e:
-                print(f"Error removing role from {member.name}: {e}")
+                print(f"Error removing High Voltage role from {member.name}: {e}")
 
-    # Add roles to new top ten members
-    mr_electricity_flag = True
+    # Assign roles to top 10 members
+    mr_electricity_given = False
     for member_id in top_ten_list:
         try:
-            member: Optional[Member] = await guild.fetch_member(member_id)
+            member = await guild.fetch_member(member_id)
             if not member:
                 continue
 
             await member.add_roles(high_voltage_role)
 
-            # Check for admin roles
-            member_role_ids = {role.id for role in member.roles}
-            has_admin_role = bool(member_role_ids.intersection(ADMIN_ROLES_IDS))
+            has_admin = bool({role.id for role in member.roles} & set(ADMIN_ROLES_IDS))
 
-            if not has_admin_role and mr_electricity_flag:
+            if not has_admin and not mr_electricity_given:
                 await member.add_roles(mr_electricity_role)
                 print(f"Awarded Mr. Electricity to {member.name}")
-                mr_electricity_flag = False
-
+                mr_electricity_given = True
         except Exception as e:
-            print(f"Error handling member {member_id}: {e}")
-            continue
+            print(f"Error processing member {member_id}: {e}")
 
 
 @client.tree.command(name="voltage", description="Show voltage leaderboard")
@@ -236,27 +221,14 @@ async def voltage(interaction: discord.Interaction):
         print("No non-admin messages found in the last 7 days")
         return
 
-    # Create embed
-    embed = Embed(
-        title=EMBED_TITLE,
-        description=EMBED_DESCRIPTION,
-        color=Color.from_rgb(255, 66, 66)
-    )
+    embed, _ = await generate_leaderboard_embed(guild)
 
-    top_ten_list: List[int] = []
-    embed_content = ""
-    for idx, (member, count) in enumerate(top_ten):
-        if isinstance(member, Member):
-            top_ten_list.append(member.id)
-            embed_content += f"{idx}. {member.name} • {count} messages\n"
-
-    if not embed_content:
-        print("No valid non-admin members found in top ten")
+    if not embed:
+        await interaction.followup.send("No valid non-admin members found in the last 7 days.")
         return
 
 
-    embed.add_field(name="", value=embed_content)
-    embed.set_footer(text="© Codebound")
+
 
     await interaction.followup.send(embed=embed)
 
