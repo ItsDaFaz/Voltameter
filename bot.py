@@ -10,6 +10,7 @@ import os
 import threading
 from flask import Flask
 import asyncio
+import re
 
 app = Flask(__name__)
 
@@ -19,6 +20,10 @@ def index():
 
 def run_web():
     app.run(host='0.0.0.0', port=8080)
+
+# util to prevent markdown in user names
+def escape_markdown(text: str) -> str:
+    return re.sub(r'([_*~`|>])', r'\\\1', text)
 
 # Run the web server in a separate thread
 threading.Thread(target=run_web).start()
@@ -152,13 +157,16 @@ async def generate_leaderboard_embed(guild: Guild):
 
     for idx, (member, count) in enumerate(top_ten):
         if isinstance(member, Member):
-            embed_content += f"{idx}. **{member.name}** • {count} messages\n"
+            memberName= escape_markdown(member.name)
+            embed_content += f"`{idx}` **{memberName}** — `{count}` messages\n"
             top_ten_list.append(member.id)
 
     if not embed_content:
         return None, []
 
     embed.add_field(name="", value=embed_content)
+    embed.set_image(url="https://res.cloudinary.com/codebound/image/upload/v1681039731/hlb-post_high-voltage_fhd_v2.1_paegjl.jpg")
+    embed.set_thumbnail(url="https://res.cloudinary.com/codebound/image/upload/v1681116021/pfp-hlb-high-voltage_em6tpk.png")
     embed.set_footer(text="© Codebound")
 
     return embed, top_ten_list
