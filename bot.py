@@ -89,7 +89,7 @@ async def on_message(message):
 # detect members joining and leaving voice channels
 @client.event
 async def on_voice_state_update(member, before, after):
-    await asyncio.sleep(1)  # Let Empymanager settle any auto-move
+    await asyncio.sleep(2)  # Let Empymanager settle any auto-move
 
     role = member.guild.get_role(IN_VOICE_ROLE_ID)
     if not role:
