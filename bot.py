@@ -49,6 +49,9 @@ client = VoltameterClient()
 async def on_ready():
     print(f"Logged in as {client.user}")
 
+    if not auto_leaderboard.is_running():
+            auto_leaderboard.start()
+
     for guild in client.guilds:
         role = guild.get_role(IN_VOICE_ROLE_ID)
         if not role:
