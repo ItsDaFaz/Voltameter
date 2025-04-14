@@ -254,7 +254,7 @@ async def voltage(interaction: Interaction):
         await interaction.response.send_message(embed=cached_leaderboard_embed)
     else:
         await interaction.response.send_message(
-            "Leaderboard is still being compiled. Please try again later.",
+            "Leaderboard is not ready yet! Please try again later.",
             ephemeral=True
         )
 
