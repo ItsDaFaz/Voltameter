@@ -4,7 +4,7 @@ import discord
 from collections import Counter
 from datetime import datetime, timedelta
 from typing import Optional, List
-from discord import Guild, TextChannel, Role, Member, Embed, Color, Thread
+from discord import Interaction, Guild, TextChannel, Role, Member, Embed, Color, Thread
 from dotenv import load_dotenv
 import os
 import threading
@@ -105,6 +105,7 @@ async def generate_leaderboard_embed(guild: Guild):
 
 @tasks.loop(minutes=5)
 async def auto_leaderboard():
+    global cached_leaderboard_embed
     guild: Optional[Guild] = client.get_guild(GUILD_ID)
     if not guild:
         print(f"Could not find guild with ID {GUILD_ID}")
@@ -145,6 +146,8 @@ async def auto_leaderboard():
     except Exception as e:
         print(f"Error cleaning previous messages: {e}")
 
+    # update cached_leaderboard_embed
+    cached_leaderboard_embed=embed
     # Send the new leaderboard
     await destination_channel.send(embed=embed)
 
@@ -184,53 +187,17 @@ async def auto_leaderboard():
             print(f"Error processing member {member_id}: {e}")
 
 
-@client.tree.command(name="voltage", description="Show voltage leaderboard")
-async def voltage(interaction: discord.Interaction):
-    seven_days_ago = datetime.utcnow() - timedelta(days=7)
-    guild = interaction.guild
-    if not guild:
-        await interaction.response.send_message("This command can only be used in a guild/server")
-        return
+@client.tree.command(name="voltage", description="Show current voltage leaderboard")
+async def voltage(interaction: Interaction):
+    global cached_leaderboard_embed
 
-    channels = [channel for channel in guild.channels if isinstance(channel, discord.TextChannel)]
-    count_messages_by_members = Counter()
-
-    await interaction.response.defer()
-
-    for channel in channels:
-        try:
-            messages = []
-            async for message in channel.history(limit=None, after=seven_days_ago):
-                messages.append(message)
-                if not message.author.bot:
-                    count_messages_by_members[message.author] += 1
-        except Exception as e:
-            print(f"Error in channel {channel.name}: {e}")
-            continue
-
-    # Filter out admin members and get top ten
-    non_admin_messages = {}
-    for member, count in count_messages_by_members.items():
-        if isinstance(member, Member):
-            member_role_ids = {role.id for role in member.roles}
-            if not member_role_ids.intersection(ADMIN_ROLES_IDS):
-                non_admin_messages[member] = count
-
-    top_ten = Counter(non_admin_messages).most_common(10)
-    if not top_ten:
-        print("No non-admin messages found in the last 7 days")
-        return
-
-    embed, _ = await generate_leaderboard_embed(guild)
-
-    if not embed:
-        await interaction.followup.send("No valid non-admin members found in the last 7 days.")
-        return
-
-
-
-
-    await interaction.followup.send(embed=embed)
+    if cached_leaderboard_embed:
+        await interaction.response.send_message(embed=cached_leaderboard_embed)
+    else:
+        await interaction.response.send_message(
+            "Leaderboard is still being compiled. Please try again later.",
+            ephemeral=True
+        )
 
 if isinstance(TOKEN,str):
     client.run(TOKEN)
