@@ -54,6 +54,19 @@ async def on_message(message):
     if message.author.id != 1117105897710305330:
         pass
 
+# VOICE CHANNEL MANAGEMENT
+
+# detect members joining and leaving voice channels
+@client.event
+async def on_voice_state_update(member, before, after):
+    print("detected vc update")
+    if before.channel is None and after.channel is not None:
+        print(f"{member.name} joined {after.channel.name}")
+    elif before.channel is not None and after.channel is None:
+        print(f"{member.name} left {before.channel.name}")
+    elif before.channel is not None and after.channel is not None:
+        print(f"{member.name} switched from {before.channel.name} to {after.channel.name}")
+
 async def generate_leaderboard_embed(guild: Guild):
     seven_days_ago = datetime.utcnow() - timedelta(days=7)
     text_channels: List[TextChannel] = [
