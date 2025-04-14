@@ -158,7 +158,7 @@ async def generate_leaderboard_embed(guild: Guild):
     for idx, (member, count) in enumerate(top_ten):
         if isinstance(member, Member):
             memberName= escape_markdown(member.name)
-            embed_content += f"`{idx}` **{memberName}** — `{count}` messages\n"
+            embed_content += f"`{idx+1}` **{memberName}** — `{count}` messages\n"
             top_ten_list.append(member.id)
 
     if not embed_content:
