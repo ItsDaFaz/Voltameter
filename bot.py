@@ -1,4 +1,4 @@
-from config import DESTINATION_CHANNEL_ID,GUILD_ID,MR_ELECTRICITY_ROLE_ID,HIGH_VOLTAGE_ROLE_ID,ADMIN_ROLES_IDS
+from config import DESTINATION_CHANNEL_ID,GUILD_ID,MR_ELECTRICITY_ROLE_ID,HIGH_VOLTAGE_ROLE_ID,ADMIN_ROLES_IDS, IN_VOICE_ROLE_ID
 from discord.ext import tasks
 import discord
 from collections import Counter
@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import os
 import threading
 from flask import Flask
+import asyncio
 
 app = Flask(__name__)
 
@@ -46,8 +47,37 @@ client = VoltameterClient()
 
 @client.event
 async def on_ready():
-    print(f"{client.user} has logged in!")
-    auto_leaderboard.start()
+    print(f"Logged in as {client.user}")
+
+    for guild in client.guilds:
+        role = guild.get_role(IN_VOICE_ROLE_ID)
+        if not role:
+            print(f"Role ID {IN_VOICE_ROLE_ID} not found in guild: {guild.name}")
+            continue
+
+        # Set of all members currently in any voice channel
+        members_in_vc = {
+            member for vc in guild.voice_channels for member in vc.members
+        }
+
+        # Assign role to those in VC
+        for member in members_in_vc:
+            if role not in member.roles:
+                try:
+                    await member.add_roles(role, reason="In VC at bot startup")
+                    print(f"Gave 'In Voice' to {member.name}")
+                except Exception as e:
+                    print(f"Failed to give role to {member.name}: {e}")
+
+        # Remove role from those *not* in VC but who still have it
+        for member in guild.members:
+            if role in member.roles and member not in members_in_vc:
+                try:
+                    await member.remove_roles(role, reason="Not in VC at bot startup")
+                    print(f"Removed 'In Voice' from {member.name}")
+                except Exception as e:
+                    print(f"Failed to remove role from {member.name}: {e}")
+
 
 @client.event
 async def on_message(message):
@@ -59,13 +89,29 @@ async def on_message(message):
 # detect members joining and leaving voice channels
 @client.event
 async def on_voice_state_update(member, before, after):
-    print("detected vc update")
-    if before.channel is None and after.channel is not None:
-        print(f"{member.name} joined {after.channel.name}")
-    elif before.channel is not None and after.channel is None:
-        print(f"{member.name} left {before.channel.name}")
-    elif before.channel is not None and after.channel is not None:
-        print(f"{member.name} switched from {before.channel.name} to {after.channel.name}")
+    await asyncio.sleep(2)  # Let Empymanager settle any auto-move
+
+    role = member.guild.get_role(IN_VOICE_ROLE_ID)
+    if not role:
+        print(f"Role ID {IN_VOICE_ROLE_ID} not found in guild: {member.guild.name}")
+        return
+
+    # Member is now in a voice channel
+    if member.voice and member.voice.channel:
+        if role not in member.roles:
+            try:
+                await member.add_roles(role, reason="Joined VC")
+                print(f"{member.name} was given 'In Voice' role.")
+            except Exception as e:
+                print(f"Failed to add role to {member.name}: {e}")
+    else:
+        if role in member.roles:
+            try:
+                await member.remove_roles(role, reason="Left VC")
+                print(f"{member.name} had 'In Voice' role removed.")
+            except Exception as e:
+                print(f"Failed to remove role from {member.name}: {e}")
+
 
 async def generate_leaderboard_embed(guild: Guild):
     seven_days_ago = datetime.utcnow() - timedelta(days=7)
