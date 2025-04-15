@@ -229,15 +229,26 @@ async def auto_leaderboard():
         print("Required roles not found")
         return
 
-    # Remove roles from users no longer in top 10
+    # Remove High Voltage from users no longer in top 10
     for member in high_voltage_role.members:
         if member.id not in top_ten_list:
             try:
                 await member.remove_roles(high_voltage_role)
             except Exception as e:
-                print(f"Error removing High Voltage role from {member.name}: {e}")
+                print(f"Error removing High Voltage from {member.name}: {e}")
 
-    # Assign roles to top 10 members
+    # Remove Mr. Electricity from users who are either no longer top or now admins
+    for member in mr_electricity_role.members:
+        role_ids = {role.id for role in member.roles}
+        is_admin = bool(role_ids & set(ADMIN_ROLES_IDS))
+        if member.id not in top_ten_list or is_admin:
+            try:
+                await member.remove_roles(mr_electricity_role)
+                print(f"Removed Mr. Electricity from {member.name}")
+            except Exception as e:
+                print(f"Error removing Mr. Electricity from {member.name}: {e}")
+
+    # Assign roles to top 10
     mr_electricity_given = False
     for member_id in top_ten_list:
         try:
@@ -255,7 +266,6 @@ async def auto_leaderboard():
                 mr_electricity_given = True
         except Exception as e:
             print(f"Error processing member {member_id}: {e}")
-
 
 @client.tree.command(name="voltage", description="Show current voltage leaderboard")
 async def voltage(interaction: Interaction):
