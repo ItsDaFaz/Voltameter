@@ -216,8 +216,8 @@ async def auto_leaderboard():
     except Exception as e:
         print(f"Error cleaning previous messages: {e}")
 
-    # update cached_leaderboard_embed
-    cached_leaderboard_embed=embed
+    # Update cached_leaderboard_embed
+    cached_leaderboard_embed = embed
     # Send the new leaderboard
     await destination_channel.send(embed=embed)
 
@@ -237,35 +237,48 @@ async def auto_leaderboard():
             except Exception as e:
                 print(f"Error removing High Voltage from {member.name}: {e}")
 
-    # Remove Mr. Electricity from users who are either no longer top or now admins
-    for member in mr_electricity_role.members:
-        role_ids = {role.id for role in member.roles}
-        is_admin = bool(role_ids & set(ADMIN_ROLES_IDS))
-        if member.id not in top_ten_list or is_admin:
-            try:
-                await member.remove_roles(mr_electricity_role)
-                print(f"Removed Mr. Electricity from {member.name}")
-            except Exception as e:
-                print(f"Error removing Mr. Electricity from {member.name}: {e}")
+    # Assign High Voltage to current top 10
+    for member_id in top_ten_list:
+        try:
+            member = await guild.fetch_member(member_id)
+            if member:
+                await member.add_roles(high_voltage_role)
+        except Exception as e:
+            print(f"Error adding High Voltage to member {member_id}: {e}")
 
-    # Assign roles to top 10
-    mr_electricity_given = False
+    # Determine current top member for Mr. Electricity
+    current_top_member = None
     for member_id in top_ten_list:
         try:
             member = await guild.fetch_member(member_id)
             if not member:
                 continue
-
-            await member.add_roles(high_voltage_role)
-
+            # Check if member is not an admin
             has_admin = bool({role.id for role in member.roles} & set(ADMIN_ROLES_IDS))
-
-            if not has_admin and not mr_electricity_given:
-                await member.add_roles(mr_electricity_role)
-                print(f"Awarded Mr. Electricity to {member.name}")
-                mr_electricity_given = True
+            if not has_admin:
+                current_top_member = member
+                break  # First eligible member in top_ten_list
         except Exception as e:
-            print(f"Error processing member {member_id}: {e}")
+            print(f"Error fetching member {member_id}: {e}")
+
+    # Remove Mr. Electricity from everyone except the current top member
+    for member in mr_electricity_role.members:
+        if current_top_member and member.id == current_top_member.id:
+            continue  # Keep the role if it's the current top member
+        try:
+            await member.remove_roles(mr_electricity_role)
+            print(f"Removed Mr. Electricity from {member.name}")
+        except Exception as e:
+            print(f"Error removing Mr. Electricity from {member.name}: {e}")
+
+    # Assign Mr. Electricity to the current top member if eligible
+    if current_top_member:
+        try:
+            await current_top_member.add_roles(mr_electricity_role)
+            print(f"Awarded Mr. Electricity to {current_top_member.name}")
+        except Exception as e:
+            print(f"Error adding Mr. Electricity to {current_top_member.name}: {e}")
+
 
 @client.tree.command(name="voltage", description="Show current voltage leaderboard")
 async def voltage(interaction: Interaction):
