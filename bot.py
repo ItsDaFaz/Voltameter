@@ -11,6 +11,7 @@ import threading
 from flask import Flask
 import asyncio
 import re
+import aiohttp
 
 app = Flask(__name__)
 
@@ -291,6 +292,32 @@ async def voltage(interaction: Interaction):
             "Leaderboard is not ready yet! Please try again later.",
             ephemeral=True
         )
+
+@client.tree.command(name="voltjoin", description="UNDER DEVELOPMENT")
+async def voltjoin(interaction: discord.Interaction):
+    if not interaction.user.voice or not interaction.user.voice.channel:
+        await interaction.response.send_message("You're not connected to a voice channel!", ephemeral=True)
+        return
+
+    vc_id = interaction.user.voice.channel.id
+    guild_id = interaction.guild.id
+
+    await interaction.response.defer(thinking=True)
+
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.post(CONTROLLER_URL, json={
+                "guild_id": guild_id,
+                "voice_channel_id": vc_id
+            }) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    await interaction.followup.send(f"🎵 Bot **{data['bot']}** is on the way to your channel!")
+                else:
+                    error = await resp.text()
+                    await interaction.followup.send(f"Failed to assign bot: {error}")
+        except Exception as e:
+            await interaction.followup.send(f"Error contacting controller: {e}")
 
 if isinstance(TOKEN,str):
     client.run(TOKEN)
