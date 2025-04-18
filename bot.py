@@ -295,7 +295,8 @@ async def voltage(interaction: Interaction):
 
 @client.tree.command(name="voltjoin", description="UNDER DEVELOPMENT")
 async def voltjoin(interaction: discord.Interaction):
-    if not interaction.user.voice or not interaction.user.voice.channel:
+
+    if not isinstance(interaction.user, Member) or not interaction.user.voice or not interaction.user.voice.channel:
         await interaction.response.send_message("You're not connected to a voice channel!", ephemeral=True)
         return
 
