@@ -4,7 +4,7 @@ import discord
 from collections import Counter
 from datetime import datetime, timedelta
 from typing import Optional, List
-from discord import Interaction, Guild, TextChannel, Role, Member, Embed, Color, Thread
+from discord import Interaction, Guild, TextChannel, Role, Member, Embed, Color, Thread, app_commands
 from dotenv import load_dotenv
 import os
 import threading
@@ -12,8 +12,10 @@ from flask import Flask
 import asyncio
 import re
 import aiohttp
+import requests
 
 app = Flask(__name__)
+CONTROLLER_URL = "http://localhost:8000/assign"
 
 @app.route('/')
 def index():
@@ -293,32 +295,30 @@ async def voltage(interaction: Interaction):
             ephemeral=True
         )
 
-@client.tree.command(name="voltjoin", description="UNDER DEVELOPMENT")
-async def voltjoin(interaction: discord.Interaction):
+@client.tree.command(name="voltjoin", description="Summon a music bot to a voice channel.")
+@app_commands.describe(channel="Select a voice channel to summon the bot to")
+async def voltjoin(interaction: discord.Interaction, channel: discord.VoiceChannel):
+    await interaction.response.defer()
 
-    if not isinstance(interaction.user, Member) or not interaction.user.voice or not interaction.user.voice.channel:
-        await interaction.response.send_message("You're not connected to a voice channel!", ephemeral=True)
-        return
+    try:
+        # Send request to controller
 
-    vc_id = interaction.user.voice.channel.id
-    guild_id = interaction.guild.id
+        if interaction.guild is None or channel is None:
+            await interaction.followup.send("❌ Invalid guild or channel. Please try again.")
+            return
 
-    await interaction.response.defer(thinking=True)
+        payload = {
+            "guild_id": str(interaction.guild.id),
+            "channel_id": str(channel.id)
+        }
+        response = requests.post(CONTROLLER_URL, json=payload)
 
-    async with aiohttp.ClientSession() as session:
-        try:
-            async with session.post(CONTROLLER_URL, json={
-                "guild_id": guild_id,
-                "voice_channel_id": vc_id
-            }) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    await interaction.followup.send(f"🎵 Bot **{data['bot']}** is on the way to your channel!")
-                else:
-                    error = await resp.text()
-                    await interaction.followup.send(f"Failed to assign bot: {error}")
-        except Exception as e:
-            await interaction.followup.send(f"Error contacting controller: {e}")
+        if response.status_code == 200:
+            await interaction.followup.send(f"🎶 A music bot is on its way to **{channel.name}**!")
+        else:
+            await interaction.followup.send("❌ Failed to assign a bot. Please try again later.")
+    except Exception as e:
+        await interaction.followup.send(f"⚠️ Error contacting the controller: `{str(e)}`")
 
 if isinstance(TOKEN,str):
     client.run(TOKEN)
