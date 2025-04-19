@@ -125,7 +125,7 @@ async def on_voice_state_update(member, before, after):
 
 
 async def generate_leaderboard_embed(guild: Guild):
-    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    days_ago = datetime.utcnow() - timedelta(days=5)
     text_channels: List[TextChannel] = [
         channel for channel in guild.channels
         if isinstance(channel, TextChannel)
@@ -134,7 +134,7 @@ async def generate_leaderboard_embed(guild: Guild):
 
     for channel in text_channels:
         try:
-            async for message in channel.history(limit=None, after=seven_days_ago):
+            async for message in channel.history(limit=None, after=days_ago):
                 if message.author and not message.author.bot:
                     count_messages_by_members[message.author] += 1
         except Exception as e:
@@ -314,7 +314,7 @@ async def voltjoin(interaction: discord.Interaction, channel: discord.VoiceChann
         response = requests.post(CONTROLLER_URL, json=payload)
 
         if response.status_code == 200:
-            await interaction.followup.send(f"🎶 A music bot is on its way to **{channel.name}**!")
+            await interaction.followup.send(f"🔉 A **VC Hogger** is on its way to **{channel.name}**!")
         else:
             await interaction.followup.send("❌ Failed to assign a bot. Please try again later.")
     except Exception as e:
