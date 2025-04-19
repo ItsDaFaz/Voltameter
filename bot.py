@@ -301,8 +301,6 @@ async def voltjoin(interaction: discord.Interaction, channel: discord.VoiceChann
     await interaction.response.defer()
 
     try:
-        # Send request to controller
-
         if interaction.guild is None or channel is None:
             await interaction.followup.send("❌ Invalid guild or channel. Please try again.")
             return
@@ -311,12 +309,18 @@ async def voltjoin(interaction: discord.Interaction, channel: discord.VoiceChann
             "guild_id": str(interaction.guild.id),
             "channel_id": str(channel.id)
         }
+
         response = requests.post(CONTROLLER_URL, json=payload)
+        data = response.json()
 
         if response.status_code == 200:
-            await interaction.followup.send(f"🔉 A **VC Hogger** is on its way to **{channel.name}**!")
+            if data.get("queued"):
+                await interaction.followup.send("⏳ All bots are busy. Your request has been queued. A bot will join **{channel.name}** when available.")
+            else:
+                await interaction.followup.send(f"🔉 A **VC Hogger** is on its way to **{channel.name}**!")
         else:
             await interaction.followup.send("❌ Failed to assign a bot. Please try again later.")
+
     except Exception as e:
         await interaction.followup.send(f"⚠️ Error contacting the controller: `{str(e)}`")
 
