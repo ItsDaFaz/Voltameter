@@ -98,7 +98,8 @@ async def on_message(message):
 @client.event
 async def on_voice_state_update(member, before, after):
     await asyncio.sleep(2)  # Let Empymanager settle any auto-move
-
+    if member.bot:
+        return
     role = member.guild.get_role(IN_VOICE_ROLE_ID)
     if not role:
         print(f"Role ID {IN_VOICE_ROLE_ID} not found in guild: {member.guild.name}")
