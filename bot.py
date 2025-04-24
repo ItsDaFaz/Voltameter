@@ -57,8 +57,9 @@ client = VoltameterClient()
 async def on_ready():
     print(f"Logged in as {client.user}")
 
-    if not auto_leaderboard.is_running():
-            auto_leaderboard.start()
+    #UNCOMMENT IN PROD
+    # if not auto_leaderboard.is_running():
+    #         auto_leaderboard.start()
 
     for guild in client.guilds:
         role = guild.get_role(IN_VOICE_ROLE_ID)
@@ -298,14 +299,27 @@ async def voltage(interaction: Interaction):
             ephemeral=True
         )
 
-@client.tree.command(name="voltjoin", description="Summon a music bot to a voice channel.")
-@app_commands.describe(channel="Select a voice channel to summon the bot to")
-async def voltjoin(interaction: discord.Interaction, channel: discord.VoiceChannel):
+@client.tree.command(name="voltjoin", description="Summon a music bot to your current voice channel or a specified one")
+@app_commands.describe(channel="Summon a music bot to your current voice channel or a specified one")
+async def voltjoin(interaction: discord.Interaction, channel: discord.VoiceChannel = None):
     await interaction.response.defer()
 
     try:
-        if interaction.guild is None or channel is None:
-            await interaction.followup.send("❌ Invalid guild or channel. Please try again.")
+        # Determine target channel
+        if channel is None:
+            if interaction.user.voice and interaction.user.voice.channel:
+                channel = interaction.user.voice.channel
+            else:
+                await interaction.followup.send(
+                    "❌ You must either:\n"
+                    "1) Specify a voice channel, or\n"
+                    "2) Be in a voice channel when using this command",
+                    ephemeral=True
+                )
+                return
+
+        if interaction.guild is None:
+            await interaction.followup.send("❌ This command only works in servers.")
             return
 
         payload = {
@@ -318,14 +332,14 @@ async def voltjoin(interaction: discord.Interaction, channel: discord.VoiceChann
 
         if response.status_code == 200:
             if data.get("queued"):
-                await interaction.followup.send("⏳ All bots are busy. Your request has been queued. A bot will join **{channel.name}** when available.")
+                await interaction.followup.send("⏳ All bots are busy. Please try again later.")
             else:
                 await interaction.followup.send(f"🔉 A **VC Hogger** is on its way to **{channel.name}**!")
         else:
             await interaction.followup.send("❌ Failed to assign a bot. Please try again later.")
 
     except Exception as e:
-        await interaction.followup.send(f"⚠️ Error contacting the controller: `{str(e)}`")
+        await interaction.followup.send(f"⚠️ Error: {str(e)[:100]}" + ("..." if len(str(e)) > 100 else ""))
 
 if isinstance(TOKEN,str):
     client.run(TOKEN)
