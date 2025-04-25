@@ -124,9 +124,11 @@ async def on_voice_state_update(member, before, after):
 
 async def generate_leaderboard_embed(guild: Guild):
     days_ago = datetime.utcnow() - timedelta(days=5)
+
+    channel_list=[1025427235093618799,1103641790411702323,1025427505332621402,1050272864483414087]
     text_channels: List[TextChannel] = [
         channel for channel in guild.channels
-        if isinstance(channel, TextChannel)
+        if isinstance(channel, TextChannel) and channel.id in channel_list
     ]
     count_messages_by_members = Counter()
 
