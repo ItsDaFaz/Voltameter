@@ -37,6 +37,7 @@ intents.presences = False
 intents.message_content = True  # This is needed for message content
 intents.guild_messages = True
 intents.members = True
+intents.voice_states = True
 EMBED_TITLE="High Voltage Leaderboard"
 EMBED_COLOR="#FF4242"
 EMBED_DESCRIPTION="Recently active HLB members are listed below. The board is refreshed every 5 minutes. The staff members are not eligible for High Voltage ranking. This is only for the regular HLB members."
@@ -125,16 +126,12 @@ async def on_voice_state_update(member, before, after):
 async def generate_leaderboard_embed(guild: Guild):
     days_ago = datetime.utcnow() - timedelta(days=5)
 
-    # channel_list=[1025427235093618799,1103641790411702323,1025427505332621402,1050272864483414087]
-    # text_channels: List[TextChannel] = [
-    #     channel for channel in guild.channels
-    #     if isinstance(channel, TextChannel) and channel.id in channel_list
-    # ]
-    # channel_list=[1025427235093618799,1103641790411702323,1025427505332621402,1050272864483414087]
+    channel_list=[1025427235093618799,1103641790411702323,1025427505332621402,1050272864483414087]
     text_channels: List[TextChannel] = [
         channel for channel in guild.channels
-        if isinstance(channel, TextChannel)
+        if isinstance(channel, TextChannel) and channel.id in channel_list
     ]
+
     count_messages_by_members = Counter()
 
     for channel in text_channels:
