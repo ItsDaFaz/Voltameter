@@ -11,6 +11,7 @@ import threading
 from flask import Flask
 import asyncio
 import re
+import random
 
 app = Flask(__name__)
 
@@ -45,11 +46,29 @@ class VoltameterClient(discord.Client):
     def __init__(self):
         super().__init__(intents=intents)
         self.tree = discord.app_commands.CommandTree(self)
+        self.leaderboard_days = 5  # Default value
+        self.leaderboard_lock = asyncio.Lock()  # Thread-safe access
+
+    async def update_leaderboard_days(self):
+        async with self.leaderboard_lock:
+            self.leaderboard_days = random.randint(4, 7)
+            print(f"Updated leaderboard days to: {self.leaderboard_days}")
+
+    async def get_leaderboard_days(self):
+        async with self.leaderboard_lock:
+            return self.leaderboard_days
 
     async def setup_hook(self):
         await self.tree.sync()
 
 client = VoltameterClient()
+
+leaderboard_days_val = 5 # default value
+
+@tasks.loop(hours=1)
+async def update_leaderboard_days_task():
+    await client.update_leaderboard_days()
+
 
 @client.event
 async def on_ready():
@@ -57,6 +76,10 @@ async def on_ready():
 
     if not auto_leaderboard.is_running():
             auto_leaderboard.start()
+    if not update_leaderboard_days_task.is_running():
+            # Initial random value
+            await client.update_leaderboard_days()
+            update_leaderboard_days_task.start()
 
     for guild in client.guilds:
         role = guild.get_role(IN_VOICE_ROLE_ID)
@@ -147,7 +170,7 @@ async def on_voice_state_update(member, before, after):
 
 
 async def generate_leaderboard_embed(guild: Guild):
-    days_ago = datetime.utcnow() - timedelta(days=5)
+    days_ago = datetime.utcnow() - timedelta(days=await client.get_leaderboard_days())
 
     channel_list=[1025427235093618799,1103641790411702323,1025427505332621402]
     text_channels: List[TextChannel] = [
