@@ -221,7 +221,7 @@ async def generate_leaderboard_embed(guild: Guild):
     embed = Embed(
         title=EMBED_TITLE,
         description=EMBED_DESCRIPTION,
-        color=Color.from_rgb(255, 66, 66)
+        color=Color.from_rgb(16, 16, 16)
     )
 
     embed_content = ""
