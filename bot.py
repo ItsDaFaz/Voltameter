@@ -4,7 +4,7 @@ import discord
 from collections import Counter
 from datetime import datetime, timedelta
 from typing import Optional, List
-from discord import Interaction, Guild, TextChannel, Role, Member, Embed, Color, Thread
+from discord import Interaction, Guild, TextChannel, ForumChannel, Role, Member, Embed, Color, Thread
 from dotenv import load_dotenv
 import os
 import threading
@@ -88,6 +88,29 @@ async def on_ready():
                     print(f"Failed to remove role from {member.name}: {e}")
 
 
+@tasks.loop(minutes=1)
+async def check_vc():
+    await client.wait_until_ready()
+    for guild in client.guilds:
+        role = guild.get_role(IN_VOICE_ROLE_ID)
+        if not role:
+            print(f"Role ID {IN_VOICE_ROLE_ID} not found in guild: {guild.name}")
+            continue
+
+        # Set of all members currently in any voice channel
+        members_in_vc = {
+            member for vc in guild.voice_channels for member in vc.members
+        }
+
+        # Check each member with the role
+        for member in role.members:
+            if member not in members_in_vc:
+                try:
+                    await member.remove_roles(role, reason="Not in voice channel")
+                    print(f"Removed 'In Voice' from {member.name}")
+                except Exception as e:
+                    print(f"Failed to remove role from {member.name}: {e}")
+
 @client.event
 async def on_message(message):
     if message.author.id != 1117105897710305330:
@@ -126,7 +149,7 @@ async def on_voice_state_update(member, before, after):
 async def generate_leaderboard_embed(guild: Guild):
     days_ago = datetime.utcnow() - timedelta(days=5)
 
-    channel_list=[1025427235093618799,1103641790411702323,1025427505332621402,1050272864483414087]
+    channel_list=[1025427235093618799,1103641790411702323,1025427505332621402]
     text_channels: List[TextChannel] = [
         channel for channel in guild.channels
         if isinstance(channel, TextChannel) and channel.id in channel_list
@@ -142,6 +165,27 @@ async def generate_leaderboard_embed(guild: Guild):
         except Exception as e:
             print(f"Error processing channel {channel.name}: {e}")
             continue
+
+
+    # UNCOMMENT WHEN FINISHED
+    # # threads in ForumChannels
+    # forum_channel_list=[1050272864483414087]
+
+    # # get threads from withing ForumChannels
+    # forum_channels: List[ForumChannel] = [
+    #     channel for channel in guild.channels
+    #     if isinstance(channel, ForumChannel) and channel.id in forum_channel_list
+    # ]
+    # #fetch all threads from each forum channels
+    # thread_list=[]
+    # for forum_channel in forum_channels:
+    #     try:
+    #         thread_list.extend(forum_channel.threads)
+    #     except Exception as e:
+    #         print(f"Error processing forum channel {forum_channel.name}: {e}")
+    #         continue
+    # print(f"Total threads fetched: {len(thread_list)}")
+    # print("Threads found: ",thread_list)
 
     # Filter out admin members and get top ten
     non_admin_messages = {
