@@ -233,6 +233,7 @@ async def generate_leaderboard_embed(guild: Guild):
             embed_content += f"`{idx+1}` **{memberName}** — `{count*3}` volt\n"
             top_ten_list.append(member.id)
 
+    embed_content += f"\nBased on last {str(client.get_leaderboard_days())} days of messaging activities."
     if not embed_content:
         return None, []
 
