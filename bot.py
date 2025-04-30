@@ -192,23 +192,23 @@ async def generate_leaderboard_embed(guild: Guild):
 
     # UNCOMMENT WHEN FINISHED
     # # threads in ForumChannels
-    # forum_channel_list=[1050272864483414087]
+    forum_channel_list=[1050272864483414087]
 
-    # # get threads from withing ForumChannels
-    # forum_channels: List[ForumChannel] = [
-    #     channel for channel in guild.channels
-    #     if isinstance(channel, ForumChannel) and channel.id in forum_channel_list
-    # ]
-    # #fetch all threads from each forum channels
-    # thread_list=[]
-    # for forum_channel in forum_channels:
-    #     try:
-    #         thread_list.extend(forum_channel.threads)
-    #     except Exception as e:
-    #         print(f"Error processing forum channel {forum_channel.name}: {e}")
-    #         continue
-    # print(f"Total threads fetched: {len(thread_list)}")
-    # print("Threads found: ",thread_list)
+    # get threads from withing ForumChannels
+    forum_channels: List[ForumChannel] = [
+        forum for channel in guild.forums
+        if isinstance(channel, ForumChannel) and channel.id in forum_channel_list
+    ]
+    #fetch all threads from each forum channels
+    thread_list=[]
+    for forum_channel in forum_channels:
+        try:
+            thread_list.extend(forum_channel.threads)
+        except Exception as e:
+            print(f"Error processing forum channel {forum_channel.name}: {e}")
+            continue
+    print(f"Total threads fetched: {len(thread_list)}")
+    print("Threads found: ",thread_list)
 
     # Filter out admin members and get top ten
     non_admin_messages = {
