@@ -76,6 +76,7 @@ async def on_ready():
 
     if not auto_leaderboard.is_running():
             auto_leaderboard.start()
+            print("Auto leaderboard started")
     if not update_leaderboard_days_task.is_running():
             # Initial random value
             await client.update_leaderboard_days()
@@ -196,7 +197,7 @@ async def generate_leaderboard_embed(guild: Guild):
 
     # get threads from withing ForumChannels
     forum_channels: List[ForumChannel] = [
-        forum for channel in guild.forums
+        channel for channel in guild.forums
         if isinstance(channel, ForumChannel) and channel.id in forum_channel_list
     ]
     #fetch all threads from each forum channels
@@ -210,6 +211,16 @@ async def generate_leaderboard_embed(guild: Guild):
     print(f"Total threads fetched: {len(thread_list)}")
     print("Threads found: ",thread_list)
 
+    # print("Message count before threads: ", len(count_messages_by_members))
+    for thread in thread_list:
+        try:
+            async for message in thread.history(limit=None):
+                if message.author.id and not message.author.bot:
+                    count_messages_by_members[message.author] += 1
+        except Exception as e:
+            print(f"Error processing thread {thread.name}: {e}")
+            continue
+    # print("Message count after threads: ", len(count_messages_by_members))
     # Filter out admin members and get top ten
     non_admin_messages = {
         member: count for member, count in count_messages_by_members.items()
