@@ -41,7 +41,7 @@ intents.members = True
 intents.voice_states = True
 EMBED_TITLE="High Voltage Leaderboard"
 EMBED_COLOR="#FF4242"
-EMBED_DESCRIPTION="Recently active HLB members are listed below. The board is refreshed every 5 minutes. The staff members are not eligible for High Voltage ranking. This is only for the regular HLB members."
+EMBED_DESCRIPTION="Recently active HLB members are ranked below, refreshed every 5 minutes. The staff members are not ranked."
 class VoltameterClient(discord.Client):
     def __init__(self):
         super().__init__(intents=intents)
