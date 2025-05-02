@@ -193,7 +193,7 @@ async def generate_leaderboard_embed(guild: Guild):
 
     # UNCOMMENT WHEN FINISHED
     # # threads in ForumChannels
-    forum_channel_list=[1050272864483414087]
+    forum_channel_list=[1050272864483414087,1111258587977760859,1321973073246687325]
 
     # get threads from withing ForumChannels
     forum_channels: List[ForumChannel] = [
