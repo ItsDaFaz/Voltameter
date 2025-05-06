@@ -4,16 +4,20 @@ import discord
 from collections import Counter
 from datetime import datetime, timedelta
 from typing import Optional, List
-from discord import Interaction, Guild, TextChannel, ForumChannel, Role, Member, Embed, Color, Thread
+from discord import Interaction, Guild, TextChannel, ForumChannel, Role, Member, Embed, Color, Thread, app_commands
 from dotenv import load_dotenv
 import os
 import threading
 from flask import Flask
 import asyncio
 import re
+import aiohttp
+import requests
 import random
 
+
 app = Flask(__name__)
+CONTROLLER_URL = "http://localhost:8000/assign"
 
 @app.route('/')
 def index():
@@ -74,6 +78,7 @@ async def update_leaderboard_days_task():
 async def on_ready():
     print(f"Logged in as {client.user}")
 
+
     if not auto_leaderboard.is_running():
             auto_leaderboard.start()
             print("Auto leaderboard started")
@@ -81,6 +86,7 @@ async def on_ready():
             # Initial random value
             await client.update_leaderboard_days()
             update_leaderboard_days_task.start()
+
 
     for guild in client.guilds:
         role = guild.get_role(IN_VOICE_ROLE_ID)
@@ -146,8 +152,10 @@ async def on_message(message):
 @client.event
 async def on_voice_state_update(member, before, after):
     await asyncio.sleep(2)  # Let Empymanager settle any auto-move
+
     if member.bot:
         return
+
     role = member.guild.get_role(IN_VOICE_ROLE_ID)
     if not role:
         print(f"Role ID {IN_VOICE_ROLE_ID} not found in guild: {member.guild.name}")
@@ -171,6 +179,7 @@ async def on_voice_state_update(member, before, after):
 
 
 async def generate_leaderboard_embed(guild: Guild):
+
     days_ago = datetime.utcnow() - timedelta(days=await client.get_leaderboard_days())
 
     channel_list=[1025427235093618799,1103641790411702323,1025427505332621402]
@@ -191,7 +200,7 @@ async def generate_leaderboard_embed(guild: Guild):
             continue
 
 
-    # UNCOMMENT WHEN FINISHED
+
     # # threads in ForumChannels
     forum_channel_list=[1050272864483414087,1111258587977760859,1321973073246687325]
 
@@ -375,6 +384,48 @@ async def voltage(interaction: Interaction):
             "Leaderboard is not ready yet! Please try again later.",
             ephemeral=True
         )
+
+@client.tree.command(name="voltjoin", description="Summon a music bot to your current voice channel or a specified one")
+@app_commands.describe(channel="Summon a music bot to your current voice channel or a specified one")
+async def voltjoin(interaction: discord.Interaction, channel: discord.VoiceChannel = None):
+    await interaction.response.defer()
+
+    try:
+        # Determine target channel
+        if channel is None:
+            if interaction.user.voice and interaction.user.voice.channel:
+                channel = interaction.user.voice.channel
+            else:
+                await interaction.followup.send(
+                    "❌ You must either:\n"
+                    "1) Specify a voice channel, or\n"
+                    "2) Be in a voice channel when using this command",
+                    ephemeral=True
+                )
+                return
+
+        if interaction.guild is None:
+            await interaction.followup.send("❌ This command only works in servers.")
+            return
+
+        payload = {
+            "guild_id": str(interaction.guild.id),
+            "channel_id": str(channel.id)
+        }
+
+        response = requests.post(CONTROLLER_URL, json=payload)
+        data = response.json()
+
+        if response.status_code == 200:
+            if data.get("queued"):
+                await interaction.followup.send("⏳ All bots are busy. Please try again later.")
+            else:
+                await interaction.followup.send(f"🔉 A **VC Hogger** is on its way to **{channel.name}**!")
+        else:
+            await interaction.followup.send("❌ Failed to assign a bot. Please try again later.")
+
+    except Exception as e:
+        await interaction.followup.send(f"⚠️ Error: {str(e)[:100]}" + ("..." if len(str(e)) > 100 else ""))
 
 if isinstance(TOKEN,str):
     client.run(TOKEN)
