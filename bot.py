@@ -4,7 +4,7 @@ import discord
 from collections import Counter
 from datetime import datetime, timedelta
 from typing import Optional, List
-from discord import Interaction, Guild, TextChannel, Role, Member, Embed, Color, Thread, app_commands
+from discord import Interaction, Guild, TextChannel, ForumChannel, Role, Member, Embed, Color, Thread, app_commands
 from dotenv import load_dotenv
 import os
 import threading
@@ -13,6 +13,8 @@ import asyncio
 import re
 import aiohttp
 import requests
+import random
+
 
 app = Flask(__name__)
 CONTROLLER_URL = "http://localhost:8000/assign"
@@ -40,26 +42,51 @@ intents.presences = False
 intents.message_content = True  # This is needed for message content
 intents.guild_messages = True
 intents.members = True
+intents.voice_states = True
 EMBED_TITLE="High Voltage Leaderboard"
 EMBED_COLOR="#FF4242"
-EMBED_DESCRIPTION="Most active HLB members are listed below. The board is refreshed every 5 minutes. The staff members are not eligible for High Voltage ranking. This is only for the regular HLB members."
+EMBED_DESCRIPTION="Recently active HLB members are ranked below, refreshed every 5 minutes. The staff members are not ranked."
 class VoltameterClient(discord.Client):
     def __init__(self):
         super().__init__(intents=intents)
         self.tree = discord.app_commands.CommandTree(self)
+        self.leaderboard_days = 5  # Default value
+        self.leaderboard_lock = asyncio.Lock()  # Thread-safe access
+
+    async def update_leaderboard_days(self):
+        async with self.leaderboard_lock:
+            self.leaderboard_days = random.randint(4, 7)
+            print(f"Updated leaderboard days to: {self.leaderboard_days}")
+
+    async def get_leaderboard_days(self):
+        async with self.leaderboard_lock:
+            return self.leaderboard_days
 
     async def setup_hook(self):
         await self.tree.sync()
 
 client = VoltameterClient()
 
+leaderboard_days_val = 5 # default value
+
+@tasks.loop(hours=1)
+async def update_leaderboard_days_task():
+    await client.update_leaderboard_days()
+
+
 @client.event
 async def on_ready():
     print(f"Logged in as {client.user}")
 
-    #UNCOMMENT IN PROD
-    # if not auto_leaderboard.is_running():
-    #         auto_leaderboard.start()
+
+    if not auto_leaderboard.is_running():
+            auto_leaderboard.start()
+            print("Auto leaderboard started")
+    if not update_leaderboard_days_task.is_running():
+            # Initial random value
+            await client.update_leaderboard_days()
+            update_leaderboard_days_task.start()
+
 
     for guild in client.guilds:
         role = guild.get_role(IN_VOICE_ROLE_ID)
@@ -90,6 +117,29 @@ async def on_ready():
                 except Exception as e:
                     print(f"Failed to remove role from {member.name}: {e}")
 
+
+@tasks.loop(minutes=1)
+async def check_vc():
+    await client.wait_until_ready()
+    for guild in client.guilds:
+        role = guild.get_role(IN_VOICE_ROLE_ID)
+        if not role:
+            print(f"Role ID {IN_VOICE_ROLE_ID} not found in guild: {guild.name}")
+            continue
+
+        # Set of all members currently in any voice channel
+        members_in_vc = {
+            member for vc in guild.voice_channels for member in vc.members
+        }
+
+        # Check each member with the role
+        for member in role.members:
+            if member not in members_in_vc:
+                try:
+                    await member.remove_roles(role, reason="Not in voice channel")
+                    print(f"Removed 'In Voice' from {member.name}")
+                except Exception as e:
+                    print(f"Failed to remove role from {member.name}: {e}")
 
 @client.event
 async def on_message(message):
@@ -129,11 +179,15 @@ async def on_voice_state_update(member, before, after):
 
 
 async def generate_leaderboard_embed(guild: Guild):
-    days_ago = datetime.utcnow() - timedelta(days=5)
+
+    days_ago = datetime.utcnow() - timedelta(days=await client.get_leaderboard_days())
+
+    channel_list=[1025427235093618799,1103641790411702323,1025427505332621402]
     text_channels: List[TextChannel] = [
         channel for channel in guild.channels
-        if isinstance(channel, TextChannel)
+        if isinstance(channel, TextChannel) and channel.id in channel_list
     ]
+
     count_messages_by_members = Counter()
 
     for channel in text_channels:
@@ -145,6 +199,37 @@ async def generate_leaderboard_embed(guild: Guild):
             print(f"Error processing channel {channel.name}: {e}")
             continue
 
+
+
+    # # threads in ForumChannels
+    forum_channel_list=[1050272864483414087,1111258587977760859,1321973073246687325]
+
+    # get threads from withing ForumChannels
+    forum_channels: List[ForumChannel] = [
+        channel for channel in guild.forums
+        if isinstance(channel, ForumChannel) and channel.id in forum_channel_list
+    ]
+    #fetch all threads from each forum channels
+    thread_list=[]
+    for forum_channel in forum_channels:
+        try:
+            thread_list.extend(forum_channel.threads)
+        except Exception as e:
+            print(f"Error processing forum channel {forum_channel.name}: {e}")
+            continue
+    print(f"Total threads fetched: {len(thread_list)}")
+    print("Threads found: ",thread_list)
+
+    # print("Message count before threads: ", len(count_messages_by_members))
+    for thread in thread_list:
+        try:
+            async for message in thread.history(limit=None):
+                if message.author.id and not message.author.bot:
+                    count_messages_by_members[message.author] += 1
+        except Exception as e:
+            print(f"Error processing thread {thread.name}: {e}")
+            continue
+    # print("Message count after threads: ", len(count_messages_by_members))
     # Filter out admin members and get top ten
     non_admin_messages = {
         member: count for member, count in count_messages_by_members.items()
@@ -156,7 +241,7 @@ async def generate_leaderboard_embed(guild: Guild):
     embed = Embed(
         title=EMBED_TITLE,
         description=EMBED_DESCRIPTION,
-        color=Color.from_rgb(255, 66, 66)
+        color=Color.from_rgb(16, 16, 16)
     )
 
     embed_content = ""
@@ -164,10 +249,11 @@ async def generate_leaderboard_embed(guild: Guild):
 
     for idx, (member, count) in enumerate(top_ten):
         if isinstance(member, Member):
-            memberName= escape_markdown(member.name)
+            memberName= escape_markdown(member.display_name)
             embed_content += f"`{idx+1}` **{memberName}** — `{count*3}` volt\n"
             top_ten_list.append(member.id)
 
+    embed_content += f"\nBased on last `{str(await client.get_leaderboard_days())}` **days** of messaging activities."
     if not embed_content:
         return None, []
 
