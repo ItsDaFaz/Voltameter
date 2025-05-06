@@ -425,7 +425,10 @@ async def voltjoin(interaction: discord.Interaction, channel: discord.VoiceChann
             await interaction.followup.send("❌ Failed to assign a bot. Please try again later.")
 
     except Exception as e:
-        await interaction.followup.send(f"⚠️ Error: {str(e)[:100]}" + ("..." if len(str(e)) > 100 else ""))
+
+        #await interaction.followup.send(f"⚠️ Error: {str(e)[:100]}" + ("..." if len(str(e)) > 100 else ""))
+        print(f"⚠️ Error: {str(e)[:100]}" + ("..." if len(str(e)) > 100 else ""))
+        await interaction.followup.send("Coming Soon!")
 
 if isinstance(TOKEN,str):
     client.run(TOKEN)
