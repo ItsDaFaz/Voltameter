@@ -385,7 +385,7 @@ async def voltage(interaction: Interaction):
             ephemeral=True
         )
 
-@client.tree.command(name="voltjoin", description="Summon a music bot to your current voice channel or a specified one")
+@client.tree.command(name="voltplay", description="Summon a music bot to your current voice channel or a specified one")
 @app_commands.describe(channel="Summon a music bot to your current voice channel or a specified one")
 async def voltjoin(interaction: discord.Interaction, channel: discord.VoiceChannel = None):
     await interaction.response.defer()
