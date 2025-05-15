@@ -44,7 +44,7 @@ intents.guild_messages = True
 intents.members = True
 intents.voice_states = True
 EMBED_TITLE="High Voltage Leaderboard"
-EMBED_COLOR="#FF4242"
+EMBED_COLOR="#f6ca0e"
 EMBED_DESCRIPTION="Recently active HLB members are ranked below, refreshed every 5 minutes. The staff members are not ranked."
 class VoltameterClient(discord.Client):
     def __init__(self):
@@ -241,7 +241,7 @@ async def generate_leaderboard_embed(guild: Guild):
     embed = Embed(
         title=EMBED_TITLE,
         description=EMBED_DESCRIPTION,
-        color=Color.from_rgb(16, 16, 16)
+        color=Color.from_str(EMBED_COLOR),
     )
 
     embed_content = ""
