@@ -1,8 +1,8 @@
-from config import DESTINATION_CHANNEL_ID,GUILD_ID,MR_ELECTRICITY_ROLE_ID,HIGH_VOLTAGE_ROLE_ID,ADMIN_ROLES_IDS, IN_VOICE_ROLE_ID
+from config import DESTINATION_CHANNEL_ID, DESTINATION_CHANNEL_ID_DEV, GUILD_ID,MR_ELECTRICITY_ROLE_ID, HIGH_VOLTAGE_ROLE_ID, ADMIN_ROLES_IDS, IN_VOICE_ROLE_ID, TEXT_CHANNEL_LIST, FORUM_CHANNEL_LIST
 from discord.ext import tasks
 import discord
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 from discord import Interaction, Guild, TextChannel, ForumChannel, Role, Member, Embed, Color, Thread, app_commands
 from dotenv import load_dotenv
@@ -35,6 +35,8 @@ threading.Thread(target=run_web).start()
 
 load_dotenv()
 TOKEN=os.getenv("TOKEN")
+IS_PROD=os.getenv("ENVIRONMENT")=="PRODUCTION"
+print(f"Running in {'production' if IS_PROD else 'development'} mode")
 intents = discord.Intents.default()
 intents.messages = True
 intents.typing = False
@@ -78,68 +80,74 @@ async def update_leaderboard_days_task():
 async def on_ready():
     print(f"Logged in as {client.user}")
 
-
-    if not auto_leaderboard.is_running():
+    # Currently, auto_leaderboards and other event handlers are disabled in dev channels to prevent rate limits
+    if IS_PROD:
+        if not auto_leaderboard.is_running():
             auto_leaderboard.start()
             print("Auto leaderboard started")
-    if not update_leaderboard_days_task.is_running():
+        if not update_leaderboard_days_task.is_running():
             # Initial random value
             await client.update_leaderboard_days()
             update_leaderboard_days_task.start()
 
 
-    for guild in client.guilds:
-        role = guild.get_role(IN_VOICE_ROLE_ID)
-        if not role:
-            print(f"Role ID {IN_VOICE_ROLE_ID} not found in guild: {guild.name}")
-            continue
+        for guild in client.guilds:
+            role = guild.get_role(IN_VOICE_ROLE_ID)
+            if not role:
+                print(f"Role ID {IN_VOICE_ROLE_ID} not found in guild: {guild.name}")
+                continue
 
-        # Set of all members currently in any voice channel
-        members_in_vc = {
-            member for vc in guild.voice_channels for member in vc.members
-        }
+            # Set of all members currently in any voice channel
+            members_in_vc = {
+                member for vc in guild.voice_channels for member in vc.members
+            }
 
-        # Assign role to those in VC
-        for member in members_in_vc:
-            if role not in member.roles:
-                try:
-                    await member.add_roles(role, reason="In VC at bot startup")
-                    print(f"Gave 'In Voice' to {member.name}")
-                except Exception as e:
-                    print(f"Failed to give role to {member.name}: {e}")
+            # Assign role to those in VC
+            for member in members_in_vc:
+                if role not in member.roles:
+                    try:
+                        await member.add_roles(role, reason="In VC at bot startup")
+                        print(f"Gave 'In Voice' to {member.name}")
+                    except Exception as e:
+                        print(f"Failed to give role to {member.name}: {e}")
 
-        # Remove role from those *not* in VC but who still have it
-        for member in guild.members:
-            if role in member.roles and member not in members_in_vc:
-                try:
-                    await member.remove_roles(role, reason="Not in VC at bot startup")
-                    print(f"Removed 'In Voice' from {member.name}")
-                except Exception as e:
-                    print(f"Failed to remove role from {member.name}: {e}")
+            # Remove role from those *not* in VC but who still have it
+            for member in guild.members:
+                if role in member.roles and member not in members_in_vc:
+                    try:
+                        await member.remove_roles(role, reason="Not in VC at bot startup")
+                        print(f"Removed 'In Voice' from {member.name}")
+                    except Exception as e:
+                        print(f"Failed to remove role from {member.name}: {e}")
+    else:
+        print("Auto leaderboard and voice channel checks are disabled in development mode.")
 
 
 @tasks.loop(minutes=1)
 async def check_vc():
-    await client.wait_until_ready()
-    for guild in client.guilds:
-        role = guild.get_role(IN_VOICE_ROLE_ID)
-        if not role:
-            print(f"Role ID {IN_VOICE_ROLE_ID} not found in guild: {guild.name}")
-            continue
+    if IS_PROD:
+        await client.wait_until_ready()
+        for guild in client.guilds:
+            role = guild.get_role(IN_VOICE_ROLE_ID)
+            if not role:
+                print(f"Role ID {IN_VOICE_ROLE_ID} not found in guild: {guild.name}")
+                continue
 
-        # Set of all members currently in any voice channel
-        members_in_vc = {
-            member for vc in guild.voice_channels for member in vc.members
-        }
+            # Set of all members currently in any voice channel
+            members_in_vc = {
+                member for vc in guild.voice_channels for member in vc.members
+            }
 
-        # Check each member with the role
-        for member in role.members:
-            if member not in members_in_vc:
-                try:
-                    await member.remove_roles(role, reason="Not in voice channel")
-                    print(f"Removed 'In Voice' from {member.name}")
-                except Exception as e:
-                    print(f"Failed to remove role from {member.name}: {e}")
+            # Check each member with the role
+            for member in role.members:
+                if member not in members_in_vc:
+                    try:
+                        await member.remove_roles(role, reason="Not in voice channel")
+                        print(f"Removed 'In Voice' from {member.name}")
+                    except Exception as e:
+                        print(f"Failed to remove role from {member.name}: {e}")
+    else:
+        print("Auto leaderboard and voice channel checks are disabled in development mode.")
 
 @client.event
 async def on_message(message):
@@ -151,38 +159,41 @@ async def on_message(message):
 # detect members joining and leaving voice channels
 @client.event
 async def on_voice_state_update(member, before, after):
-    await asyncio.sleep(2)  # Let Empymanager settle any auto-move
+    if IS_PROD:
+        await asyncio.sleep(2)  # Let Empymanager settle any auto-move
 
-    if member.bot:
-        return
+        if member.bot:
+            return
 
-    role = member.guild.get_role(IN_VOICE_ROLE_ID)
-    if not role:
-        print(f"Role ID {IN_VOICE_ROLE_ID} not found in guild: {member.guild.name}")
-        return
+        role = member.guild.get_role(IN_VOICE_ROLE_ID)
+        if not role:
+            print(f"Role ID {IN_VOICE_ROLE_ID} not found in guild: {member.guild.name}")
+            return
 
-    # Member is now in a voice channel
-    if member.voice and member.voice.channel:
-        if role not in member.roles:
-            try:
-                await member.add_roles(role, reason="Joined VC")
-                print(f"{member.name} was given 'In Voice' role.")
-            except Exception as e:
-                print(f"Failed to add role to {member.name}: {e}")
+        # Member is now in a voice channel
+        if member.voice and member.voice.channel:
+            if role not in member.roles:
+                try:
+                    await member.add_roles(role, reason="Joined VC")
+                    print(f"{member.name} was given 'In Voice' role.")
+                except Exception as e:
+                    print(f"Failed to add role to {member.name}: {e}")
+        else:
+            if role in member.roles:
+                try:
+                    await member.remove_roles(role, reason="Left VC")
+                    print(f"{member.name} had 'In Voice' role removed.")
+                except Exception as e:
+                    print(f"Failed to remove role from {member.name}: {e}")
     else:
-        if role in member.roles:
-            try:
-                await member.remove_roles(role, reason="Left VC")
-                print(f"{member.name} had 'In Voice' role removed.")
-            except Exception as e:
-                print(f"Failed to remove role from {member.name}: {e}")
+        print("Auto leaderboard and voice channel checks are disabled in development mode.")
 
 
 async def generate_leaderboard_embed(guild: Guild):
 
-    days_ago = datetime.utcnow() - timedelta(days=await client.get_leaderboard_days())
+    days_ago = datetime.now(tz=timezone.utc) - timedelta(days=await client.get_leaderboard_days())
 
-    channel_list=[1025427235093618799,1103641790411702323,1025427505332621402]
+    channel_list= TEXT_CHANNEL_LIST
     text_channels: List[TextChannel] = [
         channel for channel in guild.channels
         if isinstance(channel, TextChannel) and channel.id in channel_list
@@ -202,7 +213,7 @@ async def generate_leaderboard_embed(guild: Guild):
 
 
     # # threads in ForumChannels
-    forum_channel_list=[1050272864483414087,1111258587977760859,1321973073246687325]
+    forum_channel_list= FORUM_CHANNEL_LIST
 
     # get threads from withing ForumChannels
     forum_channels: List[ForumChannel] = [
@@ -275,7 +286,7 @@ async def auto_leaderboard():
         return
 
     try:
-        destination_channel = await client.fetch_channel(DESTINATION_CHANNEL_ID)
+        destination_channel = await client.fetch_channel(DESTINATION_CHANNEL_ID if IS_PROD else DESTINATION_CHANNEL_ID_DEV)
     except discord.NotFound:
         print(f"Channel {DESTINATION_CHANNEL_ID} was not found")
         return
@@ -390,14 +401,22 @@ async def voltage(interaction: Interaction):
 
 @client.tree.command(name="voltplay", description="Summon a music bot to your current voice channel or a specified one")
 @app_commands.describe(channel="Summon a music bot to your current voice channel or a specified one")
-async def voltjoin(interaction: discord.Interaction, channel: discord.VoiceChannel = None):
+async def voltjoin(interaction: discord.Interaction, channel: Optional[discord.VoiceChannel] = None):
     await interaction.response.defer()
 
     try:
         # Determine target channel
         if channel is None:
-            if interaction.user.voice and interaction.user.voice.channel:
-                channel = interaction.user.voice.channel
+            member = interaction.user if isinstance(interaction.user, discord.Member) else None
+            if member and member.voice and member.voice.channel:
+                if isinstance(member.voice.channel, discord.VoiceChannel):
+                    channel = member.voice.channel
+                else:
+                    await interaction.followup.send(
+                        "❌ You must be in a standard voice channel (not a stage channel) or specify one.",
+                        ephemeral=True
+                    )
+                    return
             else:
                 await interaction.followup.send(
                     "❌ You must either:\n"
