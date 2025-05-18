@@ -131,14 +131,16 @@ async def on_ready():
 
             # Assign role to those in VC
             for member in members_in_vc:
-                if role not in member.roles:
+                if role not in member.roles and not member.bot:
                     try:
                         await member.add_roles(role, reason="In VC at bot startup")
                         print(f"Gave 'In Voice' to {member.name}")
                     except Exception as e:
                         print(f"Failed to give role to {member.name}: {e}")
+                elif member.bot:
+                    print(f"{member.display_name} is a bot, ignoring.")
 
-            # Remove role from those *not* in VC but who still have it
+            # Remove role from those *not* in VC but who still have it or are bots
             for member in guild.members:
                 if role in member.roles and member not in members_in_vc:
                     try:
