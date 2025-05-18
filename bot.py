@@ -140,7 +140,7 @@ async def check_vc():
 
             # Check each member with the role
             for member in role.members:
-                if member not in members_in_vc:
+                if member not in members_in_vc or member.bot:
                     try:
                         await member.remove_roles(role, reason="Not in voice channel")
                         print(f"Removed 'In Voice' from {member.name}")
