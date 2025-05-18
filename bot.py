@@ -74,6 +74,29 @@ leaderboard_days_val = 5 # default value
 @tasks.loop(hours=1)
 async def update_leaderboard_days_task():
     await client.update_leaderboard_days()
+async def print_member_info(user_id: int):
+    guild = client.get_guild(GUILD_ID)
+    if not guild:
+        print("Guild not found.")
+        return
+    try:
+        member = await guild.fetch_member(user_id)
+    except Exception as e:
+        print(f"Could not fetch member: {e}")
+        return
+
+    print(f"--- Member Info for {user_id} ---")
+    print(f"Name: {member.name}#{member.discriminator}")
+    print(f"Display Name: {member.display_name}")
+    print(f"ID: {member.id}")
+    print(f"Bot: {member.bot}")
+    print(f"Joined At: {member.joined_at}")
+    print(f"Created At: {member.created_at}")
+    print(f"Roles: {[role.name for role in member.roles]}")
+    print(f"Avatar: {member.display_avatar.url}")
+    print("RAW DATA:\n")
+    print(member)
+    print("---------------")
 
 
 @client.event
@@ -120,6 +143,9 @@ async def on_ready():
                     except Exception as e:
                         print(f"Failed to remove role from {member.name}: {e}")
     else:
+        # TEMP: Print info for a specific user/bot ID
+        user_id = 830530156048285716  # <-- Replace with the target user/bot ID
+        await print_member_info(user_id)
         print("Auto leaderboard and voice channel checks are disabled in development mode.")
 
 
@@ -140,7 +166,15 @@ async def check_vc():
 
             # Check each member with the role
             for member in role.members:
-                if member not in members_in_vc or member.bot:
+                if member.bot:
+                    print(f"{member.display_name} is a bot, removing role.")
+                    try:
+                        await member.remove_roles(role, reason="Bot in VC")
+                        print(f"Removed 'In Voice' from {member.name}")
+                    except Exception as e:
+                        print(f"Failed to remove role from {member.name}: {e}")
+                    
+                if member not in members_in_vc:
                     try:
                         await member.remove_roles(role, reason="Not in voice channel")
                         print(f"Removed 'In Voice' from {member.name}")
@@ -163,6 +197,7 @@ async def on_voice_state_update(member, before, after):
         await asyncio.sleep(2)  # Let Empymanager settle any auto-move
 
         if member.bot:
+            print(f"{member.display_name} is a bot, ignoring.")
             return
 
         role = member.guild.get_role(IN_VOICE_ROLE_ID)
@@ -466,3 +501,6 @@ if isinstance(TOKEN,str):
     client.run(TOKEN)
 else:
     print("TOKEN is required to run the bot")
+
+
+    
