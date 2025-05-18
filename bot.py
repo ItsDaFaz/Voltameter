@@ -403,54 +403,61 @@ async def voltage(interaction: Interaction):
 @app_commands.describe(channel="Summon a music bot to your current voice channel or a specified one")
 async def voltjoin(interaction: discord.Interaction, channel: Optional[discord.VoiceChannel] = None):
     await interaction.response.defer()
-
-    try:
-        # Determine target channel
-        if channel is None:
-            member = interaction.user if isinstance(interaction.user, discord.Member) else None
-            if member and member.voice and member.voice.channel:
-                if isinstance(member.voice.channel, discord.VoiceChannel):
-                    channel = member.voice.channel
+    # temporarily disable this command in prod mode
+    if not IS_PROD:
+        try:
+            # Determine target channel
+            if channel is None:
+                member = interaction.user if isinstance(interaction.user, discord.Member) else None
+                if member and member.voice and member.voice.channel:
+                    if isinstance(member.voice.channel, discord.VoiceChannel):
+                        channel = member.voice.channel
+                    else:
+                        await interaction.followup.send(
+                            "❌ You must be in a standard voice channel (not a stage channel) or specify one.",
+                            ephemeral=True
+                        )
+                        return
                 else:
                     await interaction.followup.send(
-                        "❌ You must be in a standard voice channel (not a stage channel) or specify one.",
+                        "❌ You must either:\n"
+                        "1) Specify a voice channel, or\n"
+                        "2) Be in a voice channel when using this command",
                         ephemeral=True
                     )
                     return
-            else:
-                await interaction.followup.send(
-                    "❌ You must either:\n"
-                    "1) Specify a voice channel, or\n"
-                    "2) Be in a voice channel when using this command",
-                    ephemeral=True
-                )
+
+            if interaction.guild is None:
+                await interaction.followup.send("❌ This command only works in servers.")
                 return
 
-        if interaction.guild is None:
-            await interaction.followup.send("❌ This command only works in servers.")
-            return
+            payload = {
+                "guild_id": str(interaction.guild.id),
+                "channel_id": str(channel.id)
+            }
 
-        payload = {
-            "guild_id": str(interaction.guild.id),
-            "channel_id": str(channel.id)
-        }
+            response = requests.post(CONTROLLER_URL, json=payload)
+            data = response.json()
 
-        response = requests.post(CONTROLLER_URL, json=payload)
-        data = response.json()
-
-        if response.status_code == 200:
-            if data.get("queued"):
-                await interaction.followup.send("⏳ All bots are busy. Please try again later.")
+            if response.status_code == 200:
+                if data.get("queued"):
+                    await interaction.followup.send("⏳ All bots are busy. Please try again later.")
+                else:
+                    await interaction.followup.send(f"🔉 A **VC Hogger** is on its way to **{channel.name}**!")
             else:
-                await interaction.followup.send(f"🔉 A **VC Hogger** is on its way to **{channel.name}**!")
-        else:
-            await interaction.followup.send("❌ Failed to assign a bot. Please try again later.")
+                await interaction.followup.send("❌ Failed to assign a bot. Please try again later.")
 
-    except Exception as e:
+        except Exception as e:
 
         #await interaction.followup.send(f"⚠️ Error: {str(e)[:100]}" + ("..." if len(str(e)) > 100 else ""))
-        print(f"⚠️ Error: {str(e)[:100]}" + ("..." if len(str(e)) > 100 else ""))
-        await interaction.followup.send("Coming Soon!")
+            print(f"⚠️ Error: {str(e)[:100]}" + ("..." if len(str(e)) > 100 else ""))
+            await interaction.followup.send("Coming Soon!")
+    else:
+        await interaction.followup.send(
+            "Coming soon!",
+            ephemeral=True
+        )
+        
 
 if isinstance(TOKEN,str):
     client.run(TOKEN)
