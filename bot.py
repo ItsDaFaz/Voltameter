@@ -402,8 +402,10 @@ async def voltage(interaction: Interaction):
 @client.tree.command(name="voltplay", description="Summon a music bot to your current voice channel or a specified one")
 @app_commands.describe(channel="Summon a music bot to your current voice channel or a specified one")
 async def voltjoin(interaction: discord.Interaction, channel: Optional[discord.VoiceChannel] = None):
-    await interaction.response.defer()
-    # temporarily disable this command in prod mode
+    # Only defer if you expect a long-running operation before responding
+    # Here, we only need to defer if we know we'll take a while (e.g., network call)
+    # But since we always respond quickly, don't defer at the start
+
     if not IS_PROD:
         try:
             # Determine target channel
@@ -413,13 +415,13 @@ async def voltjoin(interaction: discord.Interaction, channel: Optional[discord.V
                     if isinstance(member.voice.channel, discord.VoiceChannel):
                         channel = member.voice.channel
                     else:
-                        await interaction.followup.send(
+                        await interaction.response.send_message(
                             "❌ You must be in a standard voice channel (not a stage channel) or specify one.",
                             ephemeral=True
                         )
                         return
                 else:
-                    await interaction.followup.send(
+                    await interaction.response.send_message(
                         "❌ You must either:\n"
                         "1) Specify a voice channel, or\n"
                         "2) Be in a voice channel when using this command",
@@ -428,13 +430,16 @@ async def voltjoin(interaction: discord.Interaction, channel: Optional[discord.V
                     return
 
             if interaction.guild is None:
-                await interaction.followup.send("❌ This command only works in servers.")
+                await interaction.response.send_message("❌ This command only works in servers.")
                 return
 
             payload = {
                 "guild_id": str(interaction.guild.id),
                 "channel_id": str(channel.id)
             }
+
+            # Defer here if you expect the request to take a while
+            await interaction.response.defer(thinking=True)
 
             response = requests.post(CONTROLLER_URL, json=payload)
             data = response.json()
@@ -448,12 +453,10 @@ async def voltjoin(interaction: discord.Interaction, channel: Optional[discord.V
                 await interaction.followup.send("❌ Failed to assign a bot. Please try again later.")
 
         except Exception as e:
-
-        #await interaction.followup.send(f"⚠️ Error: {str(e)[:100]}" + ("..." if len(str(e)) > 100 else ""))
             print(f"⚠️ Error: {str(e)[:100]}" + ("..." if len(str(e)) > 100 else ""))
             await interaction.followup.send("Coming Soon!")
     else:
-        await interaction.followup.send(
+        await interaction.response.send_message(
             "Coming soon!",
             ephemeral=True
         )
