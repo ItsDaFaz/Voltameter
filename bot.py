@@ -112,6 +112,10 @@ async def on_ready():
             # Initial random value
             await client.update_leaderboard_days()
             update_leaderboard_days_task.start()
+        if not check_vc.is_running():
+            check_vc.start()
+            print("Auto voice channel check started")
+
 
 
         for guild in client.guilds:
@@ -153,6 +157,7 @@ async def on_ready():
 async def check_vc():
     if IS_PROD:
         await client.wait_until_ready()
+        print ("Checking voice channels...")
         for guild in client.guilds:
             role = guild.get_role(IN_VOICE_ROLE_ID)
             if not role:
@@ -163,6 +168,7 @@ async def check_vc():
             members_in_vc = {
                 member for vc in guild.voice_channels for member in vc.members
             }
+            print(f"Members in VC: [{', '.join(f'{member.name} (bot={member.bot})' for member in members_in_vc)}],")
 
             # Check each member with the role
             for member in role.members:
