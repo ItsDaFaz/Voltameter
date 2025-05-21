@@ -1,6 +1,6 @@
 
 #============
-#||Role IDs||
+#//Role IDs//
 #============
 
 # Administrator = 880229392599617606
@@ -20,7 +20,7 @@ IN_VOICE_ROLE_ID= 1116394870853091339
 
 
 #=================
-#||Channel IDs||
+#//Channel IDs//
 #=================
 
 DESTINATION_CHANNEL_ID:int = 1103663099346702396 # Leaderboard
@@ -29,3 +29,8 @@ DESTINATION_CHANNEL_ID_DEV:int = 1116021763608940585  # Terminal 1
 TEXT_CHANNEL_LIST:list[int] = [1025427235093618799,1103641790411702323,1025427505332621402]
 FORUM_CHANNEL_LIST:list[int] = [1050272864483414087,1111258587977760859,1321973073246687325]
 
+#========
+#//URLs//
+#========
+
+CONTROLLER_URL = "http://localhost:5000/voltplay"
