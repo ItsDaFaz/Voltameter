@@ -9,8 +9,8 @@ from cogs.commands import CommandCog
 
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
-# IS_PROD = os.getenv("ENVIRONMENT") == "PRODUCTION"
-IS_PROD = True
+IS_PROD = os.getenv("ENVIRONMENT") == "PRODUCTION"
+
 print(f"Running in {'production' if IS_PROD else 'development'} mode", flush=True)
 
 intents = discord.Intents.default()
