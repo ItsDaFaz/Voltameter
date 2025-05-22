@@ -1,15 +1,20 @@
-from flask import Flask
+from fastapi import FastAPI
+import uvicorn
 
-def create_app():
-    app = Flask(__name__)
+class WebServer:
+    def __init__(self):
+        self.app = FastAPI()
+        self.setup_routes()
 
-    @app.route('/')
-    def index():
-        return "Bot is running!"
+    def setup_routes(self):
+        @self.app.get('/')
+        def index():
+            return "Bot is running!"
 
-    return app
+    def run(self):
+        uvicorn.run(self.app, host='0.0.0.0', port=8080)
 
-
-def run_web():
-    app = create_app()
-    app.run(host='0.0.0.0', port=8080)
+# Create a single instance for import/use elsewhere
+webserver = WebServer()
+run_web = webserver.run
+app = webserver.app
