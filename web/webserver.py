@@ -7,7 +7,7 @@ class WebServer:
         self.setup_routes()
 
     def setup_routes(self):
-        @self.app.get('/')
+        @self.app.api_route('/', methods=['GET','HEAD'])
         def index():
             return "Bot is running!"
 
