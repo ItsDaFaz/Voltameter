@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 import uvicorn
-import databases
 from contextlib import asynccontextmanager
 import os
 from dotenv import load_dotenv
+from db.session import database  # Use shared database instance
 
 load_dotenv()  # Load environment variables from .env file
 #DB_URL = "postgresql://user:password@localhost:5432/dbname"  # Placeholder
@@ -11,7 +11,7 @@ DB_URL = os.getenv("DB_URL", "postgresql://user:password@localhost:5432/dbname")
 print(f"Using database URL: {DB_URL}")  # Debugging line to check the DB_URL
 class WebServer:
     def __init__(self):
-        self.database = databases.Database(DB_URL)
+        self.database = database
         self.app = FastAPI(lifespan=self.lifespan)
         self.setup_routes()
 
