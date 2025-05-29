@@ -13,7 +13,7 @@ class VoiceCog:
             self.check_vc_task.start()
             print("Voice channel check task started")
 
-    async def handle_voice_state_update(self, member, before, after):
+    async def handle_voice_state_update(self, member: discord.Member, before, after):
         if self.is_prod:
             await asyncio.sleep(2)
             if member.bot:
