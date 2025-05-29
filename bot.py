@@ -6,7 +6,7 @@ from leaderboard.leaderboard import LeaderboardManager
 from web.webserver import run_web
 from cogs.voice import VoiceCog 
 from cogs.commands import CommandCog
-
+from cogs.messages import MessageCog
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 IS_PROD = os.getenv("ENVIRONMENT") == "PRODUCTION"
@@ -39,6 +39,8 @@ threading.Thread(target=run_web).start()
 leaderboard_manager = LeaderboardManager(client, IS_PROD)
 voice_cog = VoiceCog(client, IS_PROD)
 command_cog = CommandCog(client, leaderboard_manager, IS_PROD)
+message_cog = MessageCog(client, IS_PROD)
+
 
 @client.event
 async def on_ready():
@@ -64,6 +66,13 @@ async def on_voice_state_update(member, before, after):
         await voice_cog.handle_voice_state_update(member, before, after)
     else:
         print("Auto leaderboard and voice channel checks are disabled in development mode.")
+
+@client.event
+async def on_message(message):
+    if not IS_PROD:
+        await message_cog.on_message(message)
+    else:
+        print("Message processing is disabled in development mode.")
 
 if isinstance(TOKEN, str):
     client.run(TOKEN)
