@@ -6,6 +6,7 @@ from leaderboard.leaderboard import LeaderboardManager
 from web.webserver import run_web
 from cogs.voice import VoiceCog 
 from cogs.commands import CommandCog
+import time
 
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
@@ -65,7 +66,25 @@ async def on_voice_state_update(member, before, after):
     else:
         print("Auto leaderboard and voice channel checks are disabled in development mode.")
 
-if isinstance(TOKEN, str):
-    client.run(TOKEN)
+RETRY_DELAY = 60  # seconds
+
+def run_discord_bot():
+    attempt = 1
+    while True:
+        try:
+            print(f"Attempt {attempt}: Starting Discord client...", flush=True)
+            if TOKEN is None:
+                print("TOKEN is required to run the bot")
+                break
+            client.run(TOKEN)
+            break  # Exit loop if client.run returns (usually on logout)
+        except Exception as e:
+            print(f"Error on attempt {attempt}: {e}", flush=True)
+            print(f"Retrying in {RETRY_DELAY} seconds...", flush=True)
+            time.sleep(RETRY_DELAY)
+            attempt += 1
+
+if isinstance(TOKEN, str) and TOKEN:
+    run_discord_bot()
 else:
     print("TOKEN is required to run the bot")
