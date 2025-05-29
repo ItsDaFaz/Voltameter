@@ -49,6 +49,7 @@ class VoiceCog:
                 if not role:
                     print(f"Role ID {IN_VOICE_ROLE_ID} not found in guild: {guild.name}")
                     continue
+                #Get all members in voice channels
                 members_in_vc = {
                     member for vc in guild.voice_channels for member in vc.members
                 }
@@ -67,5 +68,12 @@ class VoiceCog:
                             print(f"Removed 'In Voice' from {member.name}")
                         except Exception as e:
                             print(f"Failed to remove role from {member.name}: {e}")
+                    elif member in members_in_vc and role not in member.roles:
+                        try:
+                            await member.add_roles(role, reason="Joined VC")
+                            print(f"Added 'In Voice' to {member.name}")
+                        except Exception as e:
+                            print(f"Failed to add role to {member.name}: {e}")
+            print("Voice channel check completed.")
         else:
             print("Auto leaderboard and voice channel checks are disabled in development mode.")
