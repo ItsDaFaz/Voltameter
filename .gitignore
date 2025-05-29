@@ -4,3 +4,4 @@ __pycache__
 ./cogs/__pycache__
 .ropeproject
 webserver/.env
+test.db
