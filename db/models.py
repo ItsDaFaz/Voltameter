@@ -14,6 +14,6 @@ class Message(Base):
     id = Column(Integer, primary_key=True, index=True)
     author_id = Column(Integer, ForeignKey('members.id'))
     timestamp = Column(DateTime, nullable=False)
-    in_voice = Column(Boolean, default=False)
+    
 
     author = relationship('Member', back_populates='messages')
