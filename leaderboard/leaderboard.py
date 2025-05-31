@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 import discord
 from discord.ext import tasks
-from discord import Guild, TextChannel, ForumChannel, Member, Embed, Color, Thread, Role
+from discord import Guild, TextChannel, ForumChannel, Member, Embed, Color, Thread, Role, VoiceChannel
 from config import DESTINATION_CHANNEL_ID, DESTINATION_CHANNEL_ID_DEV, GUILD_ID, MR_ELECTRICITY_ROLE_ID, HIGH_VOLTAGE_ROLE_ID, ADMIN_ROLES_IDS, TEXT_CHANNEL_LIST, FORUM_CHANNEL_LIST
 from utils.helpers import escape_markdown
 
@@ -34,10 +34,13 @@ class LeaderboardManager:
     async def generate_leaderboard_embed(self, guild: Guild):
         days_ago = datetime.now(tz=timezone.utc) - timedelta(days=await self.get_leaderboard_days())
         channel_list = TEXT_CHANNEL_LIST
-        text_channels: List[TextChannel] = [
+        text_channels: List[TextChannel | VoiceChannel] = [
             channel for channel in guild.channels
-            if isinstance(channel, TextChannel) and channel.id in channel_list
+            if isinstance(channel, (TextChannel,VoiceChannel)) and channel.id in channel_list
         ]
+        # Output the names of the channels from the ids found in TEXT_CHANNEL_LIST
+        channel_names = [channel.name for channel in text_channels]
+        print(f"Selected text channels: {channel_names}")
         count_messages_by_members = Counter()
         for channel in text_channels:
             try:
@@ -52,6 +55,15 @@ class LeaderboardManager:
             channel for channel in getattr(guild, 'forums', [])
             if isinstance(channel, ForumChannel) and channel.id in forum_channel_list
         ]
+        # Output the names of the forum channels from the ids found in FORUM_CHANNEL_LIST
+        forum_channel_names = [channel.name for channel in forum_channels]
+        print(f"Selected forum channels: {forum_channel_names}")
+        if not forum_channels:
+            print("No valid forum channels found in the guild.")
+            return None, []
+        if not text_channels:
+            print("No valid text channels found in the guild.")
+            return None, []
         thread_list = []
         for forum_channel in forum_channels:
             try:
