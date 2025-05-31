@@ -43,7 +43,7 @@ class VoiceCog:
     async def check_vc(self):
         if self.is_prod:
             await self.client.wait_until_ready()
-            print("Checking voice channels...")
+            # print("Checking voice channels...")
             for guild in self.client.guilds:
                 role = guild.get_role(IN_VOICE_ROLE_ID)
                 if not role:
@@ -53,7 +53,7 @@ class VoiceCog:
                 members_in_vc = {
                     member for vc in guild.voice_channels for member in vc.members
                 }
-                print(f"Members in VC: [{', '.join(f'{member.name} (bot={member.bot})' for member in members_in_vc)}],")
+                #print(f"Members in VC: [{', '.join(f'{member.name} (bot={member.bot})' for member in members_in_vc)}],")
                 for member in role.members:
                     if member.bot:
                         print(f"{member.display_name} is a bot, removing role.")
