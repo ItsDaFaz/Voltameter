@@ -22,6 +22,7 @@ class LeaderboardManager:
         self.is_prod = IS_PROD
 
     async def update_leaderboard_days(self):
+        
         async with self.leaderboard_lock:
             self.leaderboard_days = random.randint(4, 7)
             print(f"Updated leaderboard days to: {self.leaderboard_days}")
@@ -98,88 +99,91 @@ class LeaderboardManager:
 
     @tasks.loop(minutes=5)
     async def auto_leaderboard(self):
-        guild: Optional[Guild] = self.client.get_guild(GUILD_ID)
-        print("Beginning leaderboard update...")
-        if not guild:
-            print(f"Could not find guild with ID {GUILD_ID}")
-            return
         try:
-            destination_channel = await self.client.fetch_channel(DESTINATION_CHANNEL_ID)
-        except discord.NotFound:
-            print(f"Channel {DESTINATION_CHANNEL_ID} was not found")
-            return
-        except discord.Forbidden:
-            print(f"Bot does not have permission to access channel {DESTINATION_CHANNEL_ID}")
-            return
-        except discord.HTTPException as e:
-            print(f"HTTP error while fetching channel: {e}")
-            return
-        if not isinstance(destination_channel, (TextChannel, Thread)):
-            print(f"Channel {DESTINATION_CHANNEL_ID} is not a text channel or thread.")
-            return
-        bot_user: Optional[discord.ClientUser] = self.client.user
-        if not bot_user:
-            print("Bot user is not initialized")
-            return
-        embed, top_ten_list = await self.generate_leaderboard_embed(guild)
-        if not embed:
-            print("No valid non-admin members found for leaderboard")
-            return
-        try:
-            async for message in destination_channel.history(limit=None):
-                if message.author == bot_user:
-                    await message.delete()
-        except Exception as e:
-            print(f"Error cleaning previous messages: {e}")
-        self.cached_leaderboard_embed = embed
-        await destination_channel.send(embed=embed)
-        mr_electricity_role: Optional[Role] = discord.utils.get(guild.roles, id=MR_ELECTRICITY_ROLE_ID)
-        high_voltage_role: Optional[Role] = discord.utils.get(guild.roles, id=HIGH_VOLTAGE_ROLE_ID)
-        if not high_voltage_role or not mr_electricity_role:
-            print("Required roles not found")
-            return
-        try:
-            for member in high_voltage_role.members:
-                if member.id not in top_ten_list:
+            guild: Optional[Guild] = self.client.get_guild(GUILD_ID)
+            print("Beginning leaderboard update...")
+            if not guild:
+                print(f"Could not find guild with ID {GUILD_ID}")
+                return
+            try:
+                destination_channel = await self.client.fetch_channel(DESTINATION_CHANNEL_ID)
+            except discord.NotFound:
+                print(f"Channel {DESTINATION_CHANNEL_ID} was not found")
+                return
+            except discord.Forbidden:
+                print(f"Bot does not have permission to access channel {DESTINATION_CHANNEL_ID}")
+                return
+            except discord.HTTPException as e:
+                print(f"HTTP error while fetching channel: {e}")
+                return
+            if not isinstance(destination_channel, (TextChannel, Thread)):
+                print(f"Channel {DESTINATION_CHANNEL_ID} is not a text channel or thread.")
+                return
+            bot_user: Optional[discord.ClientUser] = self.client.user
+            if not bot_user:
+                print("Bot user is not initialized")
+                return
+            embed, top_ten_list = await self.generate_leaderboard_embed(guild)
+            if not embed:
+                print("No valid non-admin members found for leaderboard")
+                return
+            try:
+                async for message in destination_channel.history(limit=None):
+                    if message.author == bot_user:
+                        await message.delete()
+            except Exception as e:
+                print(f"Error cleaning previous messages: {e}")
+            self.cached_leaderboard_embed = embed
+            await destination_channel.send(embed=embed)
+            mr_electricity_role: Optional[Role] = discord.utils.get(guild.roles, id=MR_ELECTRICITY_ROLE_ID)
+            high_voltage_role: Optional[Role] = discord.utils.get(guild.roles, id=HIGH_VOLTAGE_ROLE_ID)
+            if not high_voltage_role or not mr_electricity_role:
+                print("Required roles not found")
+                return
+            try:
+                for member in high_voltage_role.members:
+                    if member.id not in top_ten_list:
+                        try:
+                            await member.remove_roles(high_voltage_role)
+                        except Exception as e:
+                            print(f"Error removing High Voltage from {member.name}: {e}")
+                for member_id in top_ten_list:
                     try:
-                        await member.remove_roles(high_voltage_role)
+                        member = await guild.fetch_member(member_id)
+                        if member:
+                            await member.add_roles(high_voltage_role)
                     except Exception as e:
-                        print(f"Error removing High Voltage from {member.name}: {e}")
-            for member_id in top_ten_list:
-                try:
-                    member = await guild.fetch_member(member_id)
-                    if member:
-                        await member.add_roles(high_voltage_role)
-                except Exception as e:
-                    print(f"Error adding High Voltage to member {member_id}: {e}")
-            current_top_member = None
-            for member_id in top_ten_list:
-                try:
-                    member = await guild.fetch_member(member_id)
-                    if not member:
+                        print(f"Error adding High Voltage to member {member_id}: {e}")
+                current_top_member = None
+                for member_id in top_ten_list:
+                    try:
+                        member = await guild.fetch_member(member_id)
+                        if not member:
+                            continue
+                        has_admin = bool({role.id for role in member.roles} & set(ADMIN_ROLES_IDS))
+                        if not has_admin:
+                            current_top_member = member
+                            break
+                    except Exception as e:
+                        print(f"Error fetching member {member_id}: {e}")
+                for member in mr_electricity_role.members:
+                    if current_top_member and member.id == current_top_member.id:
                         continue
-                    has_admin = bool({role.id for role in member.roles} & set(ADMIN_ROLES_IDS))
-                    if not has_admin:
-                        current_top_member = member
-                        break
-                except Exception as e:
-                    print(f"Error fetching member {member_id}: {e}")
-            for member in mr_electricity_role.members:
-                if current_top_member and member.id == current_top_member.id:
-                    continue
-                try:
-                    await member.remove_roles(mr_electricity_role)
-                    print(f"Removed Mr. Electricity from {member.name}")
-                except Exception as e:
-                    print(f"Error removing Mr. Electricity from {member.name}: {e}")
-            if current_top_member:
-                try:
-                    await current_top_member.add_roles(mr_electricity_role)
-                    print(f"Awarded Mr. Electricity to {current_top_member.name}")
-                except Exception as e:
-                    print(f"Error adding Mr. Electricity to {current_top_member.name}: {e}")
+                    try:
+                        await member.remove_roles(mr_electricity_role)
+                        print(f"Removed Mr. Electricity from {member.name}")
+                    except Exception as e:
+                        print(f"Error removing Mr. Electricity from {member.name}: {e}")
+                if current_top_member:
+                    try:
+                        await current_top_member.add_roles(mr_electricity_role)
+                        print(f"Awarded Mr. Electricity to {current_top_member.name}")
+                    except Exception as e:
+                        print(f"Error adding Mr. Electricity to {current_top_member.name}: {e}")
+            except Exception as e:
+                print(f"Unexpected error during role management: {e}")
         except Exception as e:
-            print(f"Unexpected error during role management: {e}")
+            print(f"Error in auto leaderboard task: {e}, will retry in 5 minutes.")
 
     @tasks.loop(hours=1)
     async def update_leaderboard_days_task(self):
