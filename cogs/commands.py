@@ -3,6 +3,7 @@ import discord
 from discord import app_commands, Interaction
 from config import CONTROLLER_URL
 from typing import Optional
+from config import TEXT_CHANNEL_LIST, FORUM_CHANNEL_LIST, DESTINATION_CHANNEL_ID, DESTINATION_CHANNEL_ID_DEV, EMBED_DESCRIPTION, EMBED_TITLE, EMBED_COLOR
 
 class CommandCog:
     def __init__(self, client, leaderboard_manager, is_prod):
@@ -22,7 +23,57 @@ class CommandCog:
                     "Leaderboard is not ready yet! Please try again later.",
                     ephemeral=True
                 )
+        @self.client.tree.command(name="voltcheck", description="Check the current voltage leaderboard")
+        async def voltcheck(interaction: Interaction):
+            if not self.is_prod:
+                # Check if user is administrator
+                member = interaction.user
+                if not isinstance(member, discord.Member) or not member.guild_permissions.administrator:
+                    await interaction.response.send_message(
+                    "❌ Only administrators can use this command.",
+                    ephemeral=True
+                    )
+                    return
 
+                guild = interaction.guild
+                text_channels = []
+                forum_channels = []
+
+                for channel_id in TEXT_CHANNEL_LIST:
+                    channel = guild.get_channel(channel_id) if guild is not None else None
+                    if channel:
+                        text_channels.append(f"<#{channel_id}>")
+                    else:
+                        text_channels.append(f"`{channel_id}` (not found)")
+
+                for forum_id in FORUM_CHANNEL_LIST:
+                    channel = guild.get_channel(forum_id) if guild is not None else None
+                    if channel:
+                        forum_channels.append(f"<#{forum_id}>")
+                    else:
+                        forum_channels.append(f"`{forum_id}` (not found)")
+
+                embed = discord.Embed(
+                    title="Configured Channels",
+                    color=discord.Color.blue()
+                )
+                embed.add_field(
+                    name="Text Channels",
+                    value="\n".join(text_channels) if text_channels else "None",
+                    inline=False
+                )
+                embed.add_field(
+                    name="Forum Channels",
+                    value="\n".join(forum_channels) if forum_channels else "None",
+                    inline=False
+                )
+
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+            else:
+                await interaction.response.send_message(
+                    "Coming soon!",
+                    ephemeral=True
+            )
         @self.client.tree.command(name="voltplay", description="Summon a music bot to your current voice channel or a specified one")
         @app_commands.describe(channel="Summon a music bot to your current voice channel or a specified one")
         async def voltjoin(interaction: Interaction, channel: Optional[discord.VoiceChannel] = None):
