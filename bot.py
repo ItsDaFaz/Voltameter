@@ -70,6 +70,7 @@ RETRY_DELAY = 60  # seconds
 
 def run_discord_bot():
     attempt = 1
+    delay = RETRY_DELAY
     while True:
         try:
             print(f"Attempt {attempt}: Starting Discord client...", flush=True)
@@ -77,11 +78,16 @@ def run_discord_bot():
                 print("TOKEN is required to run the bot")
                 break
             client.run(TOKEN)
-            break  # Exit loop if client.run returns (usually on logout)
+            break
         except Exception as e:
             print(f"Error on attempt {attempt}: {e}", flush=True)
-            print(f"Retrying in {RETRY_DELAY} seconds...", flush=True)
-            time.sleep(RETRY_DELAY)
+            if "429" in str(e) or "rate limit" in str(e).lower():
+                delay = max(delay * 2, 900)  # Exponential backoff, at least 15 minutes
+                print(f"Rate limit detected. Backing off for {delay} seconds...", flush=True)
+            else:
+                delay = RETRY_DELAY
+                print(f"Retrying in {delay} seconds...", flush=True)
+            time.sleep(delay)
             attempt += 1
 
 if isinstance(TOKEN, str) and TOKEN:
