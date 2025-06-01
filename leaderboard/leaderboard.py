@@ -191,11 +191,11 @@ class LeaderboardManager:
                         await current_top_member.add_roles(mr_electricity_role)
                         print(f"Awarded Mr. Electricity to {current_top_member.name}")
                     except Exception as e:
-                        print(f"Error adding Mr. Electricity to {current_top_member.name}: {e}")
+                        print(f"Error adding Mr. Electricity to {current_top_member.name}: {e}", flush=True)
             except Exception as e:
-                print(f"Unexpected error during role management: {e}")
+                print(f"Unexpected error during role management: {e}", flush=True)
         except Exception as e:
-            print(f"Error in auto leaderboard task: {e}, will retry in 5 minutes.")
+            print(f"Error in auto leaderboard task: {e}, will retry in 5 minutes.",flush=True)
 
     @tasks.loop(hours=1)
     async def update_leaderboard_days_task(self):
