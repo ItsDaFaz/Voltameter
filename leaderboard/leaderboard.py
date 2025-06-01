@@ -6,12 +6,10 @@ from typing import Optional, List
 import discord
 from discord.ext import tasks
 from discord import Guild, TextChannel, ForumChannel, Member, Embed, Color, Thread, Role, VoiceChannel
-from config import DESTINATION_CHANNEL_ID, DESTINATION_CHANNEL_ID_DEV, GUILD_ID, MR_ELECTRICITY_ROLE_ID, HIGH_VOLTAGE_ROLE_ID, ADMIN_ROLES_IDS, TEXT_CHANNEL_LIST, FORUM_CHANNEL_LIST
+from config import DESTINATION_CHANNEL_ID, DESTINATION_CHANNEL_ID_DEV, GUILD_ID, MR_ELECTRICITY_ROLE_ID, HIGH_VOLTAGE_ROLE_ID, ADMIN_ROLES_IDS, TEXT_CHANNEL_LIST, FORUM_CHANNEL_LIST, EMBED_DESCRIPTION, EMBED_TITLE, EMBED_COLOR
 from utils.helpers import escape_markdown
 
-EMBED_TITLE = "High Voltage Leaderboard"
-EMBED_COLOR = "#f6ca0e"
-EMBED_DESCRIPTION = "Recently active HLB members are ranked below, refreshed every 5 minutes. The staff members are not ranked."
+
 
 class LeaderboardManager:
     def __init__(self, client, IS_PROD):
