@@ -46,19 +46,19 @@ class CommandCog:
 
             for channel_id in TEXT_CHANNEL_LIST:
                 channel = guild.get_channel(channel_id) if guild is not None else None
-                count = text_channels_count.get(channel_id, 0)
+                count:int = text_channels_count.get(channel_id, 0)
                 if channel:
-                    text_channels.append(f"<#{channel_id}> — `{count}` messages")
+                    text_channels.append(f"<#{channel_id}> — `{count*3}` volt generated")
                 else:
-                    text_channels.append(f"`{channel_id}` (not found) — `{count}` messages")
+                    text_channels.append(f"`{channel_id}` (not found) — `{count*3}` volt generated")
 
             for forum_id in FORUM_CHANNEL_LIST:
                 channel = guild.get_channel(forum_id) if guild is not None else None
-                count = forum_channels_count.get(forum_id, 0)
+                count:int = forum_channels_count.get(forum_id, 0)
                 if channel:
-                    forum_channels.append(f"<#{forum_id}> — `{count}` messages")
+                    forum_channels.append(f"<#{forum_id}> — `{count}` volt generated")
                 else:
-                    forum_channels.append(f"`{forum_id}` (not found) — `{count}` messages")
+                    forum_channels.append(f"`{forum_id}` (not found) — `{count}` volt generated")
 
             embed = discord.Embed(
             title="Volt Status",
@@ -73,6 +73,10 @@ class CommandCog:
             name="Forum Channels",
             value="\n".join(forum_channels) if forum_channels else "None",
             inline=False
+            )
+            embed.add_field(
+                name='',
+                value=f"\nBased on last `{str(await self.leaderboard_manager.get_leaderboard_days())}` **days** of messaging activities."
             )
             embed.set_footer(text="© Codebound")
 
