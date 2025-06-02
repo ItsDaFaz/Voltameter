@@ -26,10 +26,17 @@ class CommandCog:
                 )
         @self.client.tree.command(name="voltstatus", description="Check the current voltage leaderboard")
         async def voltstatus(interaction: Interaction):
+            if not self.leaderboard_manager.cached_leaderboard_embed:
+                await interaction.response.send_message(
+                    "Status is not ready yet! Please try again later.",
+                    ephemeral=True
+                )
+                return
+            
             guild = interaction.guild
             text_channels = []
             forum_channels = []
-            
+
             text_channels_count: Counter = await self.leaderboard_manager.get_channel_message_counts(guild)
             forum_channels_count: Counter = await self.leaderboard_manager.get_forum_message_counts(guild)
 
@@ -56,7 +63,7 @@ class CommandCog:
                 channel = guild.get_channel(forum_id) if guild is not None else None
                 count:int = forum_channels_count.get(forum_id, 0)
                 if channel:
-                    forum_channels.append(f"<#{forum_id}> — `{count}` volt generated")
+                    forum_channels.append(f"<#{forum_id}> — `{count*3}` volt generated")
                 else:
                     forum_channels.append(f"`{forum_id}` (not found) — `{count}` volt generated")
 
