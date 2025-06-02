@@ -1,9 +1,10 @@
 import requests
 import discord
-from discord import app_commands, Interaction
+from discord import app_commands, Interaction, Color
 from config import CONTROLLER_URL
 from typing import Optional
 from config import TEXT_CHANNEL_LIST, FORUM_CHANNEL_LIST, DESTINATION_CHANNEL_ID, DESTINATION_CHANNEL_ID_DEV, EMBED_DESCRIPTION, EMBED_TITLE, EMBED_COLOR
+from collections import Counter
 
 class CommandCog:
     def __init__(self, client, leaderboard_manager, is_prod):
@@ -23,52 +24,59 @@ class CommandCog:
                     "Leaderboard is not ready yet! Please try again later.",
                     ephemeral=True
                 )
-        @self.client.tree.command(name="voltcheck", description="Check the current voltage leaderboard")
-        async def voltcheck(interaction: Interaction):
-            
-            # Check if user is administrator
-            member = interaction.user
-            if not isinstance(member, discord.Member) or not member.guild_permissions.administrator:
-                await interaction.response.send_message(
-                "❌ Only administrators can use this command.",
-                ephemeral=True
-                )
-                return
-
+        @self.client.tree.command(name="voltstatus", description="Check the current voltage leaderboard")
+        async def voltstatus(interaction: Interaction):
             guild = interaction.guild
             text_channels = []
             forum_channels = []
+            
+            text_channels_count: Counter = await self.leaderboard_manager.get_channel_message_counts(guild)
+            forum_channels_count: Counter = await self.leaderboard_manager.get_forum_message_counts(guild)
+
+            if guild is not None:
+                print(f"[IN commands.py] Message counts per text channel: {text_channels_count}")
+                print(f"[IN commands.py] Message counts per forum channel: {forum_channels_count}")
+            else:
+                print("Guild is None, cannot print message counts.")
+                await interaction.response.send_message(
+                    "❌ This command can only be used in a server.",
+                    ephemeral=True
+                )
+                return
 
             for channel_id in TEXT_CHANNEL_LIST:
                 channel = guild.get_channel(channel_id) if guild is not None else None
+                count = text_channels_count.get(channel_id, 0)
                 if channel:
-                    text_channels.append(f"<#{channel_id}>")
+                    text_channels.append(f"<#{channel_id}> — `{count}` messages")
                 else:
-                    text_channels.append(f"`{channel_id}` (not found)")
+                    text_channels.append(f"`{channel_id}` (not found) — `{count}` messages")
 
             for forum_id in FORUM_CHANNEL_LIST:
                 channel = guild.get_channel(forum_id) if guild is not None else None
+                count = forum_channels_count.get(forum_id, 0)
                 if channel:
-                    forum_channels.append(f"<#{forum_id}>")
+                    forum_channels.append(f"<#{forum_id}> — `{count}` messages")
                 else:
-                    forum_channels.append(f"`{forum_id}` (not found)")
+                    forum_channels.append(f"`{forum_id}` (not found) — `{count}` messages")
 
             embed = discord.Embed(
-                title="Configured Channels",
-                color=discord.Color.blue()
+            title="Volt Status",
+            color=Color.from_str(EMBED_COLOR)
             )
             embed.add_field(
-                name="Text Channels",
-                value="\n".join(text_channels) if text_channels else "None",
-                inline=False
+            name="Text Channels",
+            value="\n".join(text_channels) if text_channels else "None",
+            inline=False
             )
             embed.add_field(
-                name="Forum Channels",
-                value="\n".join(forum_channels) if forum_channels else "None",
-                inline=False
+            name="Forum Channels",
+            value="\n".join(forum_channels) if forum_channels else "None",
+            inline=False
             )
+            embed.set_footer(text="© Codebound")
 
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.response.send_message(embed=embed)
             
         @self.client.tree.command(name="voltplay", description="Summon a music bot to your current voice channel or a specified one")
         @app_commands.describe(channel="Summon a music bot to your current voice channel or a specified one")
