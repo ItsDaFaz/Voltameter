@@ -14,9 +14,15 @@ from utils.helpers import escape_markdown
 class LeaderboardManager:
     def __init__(self, client, IS_PROD):
         self.client = client
+        # Leaderboard settings
         self.leaderboard_days = 5
         self.leaderboard_lock = asyncio.Lock()
         self.cached_leaderboard_embed = None
+
+        # Channel message counts
+        self.channel_message_counts = {}
+        self.forum_message_counts = {}
+
         self.is_prod = IS_PROD
 
     async def update_leaderboard_days(self):
@@ -28,26 +34,51 @@ class LeaderboardManager:
     async def get_leaderboard_days(self):
         async with self.leaderboard_lock:
             return self.leaderboard_days
+        
+    async def update_channel_message_counts(self, guild: Guild, count: Counter):
+        async with self.leaderboard_lock:
+            self.channel_message_counts[guild.id] = count
+            print(f"Updated channel message counts for guild {guild.id}: {count}")
+    
+    async def get_channel_message_counts(self, guild: Guild):
+        async with self.leaderboard_lock:
+            return self.channel_message_counts.get(guild.id, Counter())
+    
+    async def update_forum_message_counts(self, guild: Guild, count: Counter):
+        async with self.leaderboard_lock:
+            self.forum_message_counts[guild.id] = count
+            print(f"Updated forum message counts for guild {guild.id}: {count}")
+    async def get_forum_message_counts(self, guild: Guild):
+        async with self.leaderboard_lock:
+            return self.forum_message_counts.get(guild.id, Counter())
+
 
     async def generate_leaderboard_embed(self, guild: Guild):
         days_ago = datetime.now(tz=timezone.utc) - timedelta(days=await self.get_leaderboard_days())
         channel_list = TEXT_CHANNEL_LIST
         text_channels: List[TextChannel | VoiceChannel] = [
             channel for channel in guild.channels
-            if isinstance(channel, (TextChannel,VoiceChannel)) and channel.id in channel_list
+            if isinstance(channel, (TextChannel, VoiceChannel)) and channel.id in channel_list
         ]
         # Output the names of the channels from the ids found in TEXT_CHANNEL_LIST
         channel_names = [channel.name for channel in text_channels]
         print(f"Selected text channels: {channel_names}")
         count_messages_by_members = Counter()
+        count_messages_per_channel = Counter()
         for channel in text_channels:
             try:
                 async for message in channel.history(limit=None, after=days_ago):
+                    count_messages_per_channel[channel.id] += 1
                     if message.author and not message.author.bot:
                         count_messages_by_members[message.author] += 1
             except Exception as e:
                 print(f"Error processing channel {channel.name}: {e}")
-                continue
+            continue
+        print(f"Message counts per channel: {count_messages_per_channel}")
+
+        # Add message count to self.channel_message_counts
+        await self.update_channel_message_counts(guild, count_messages_per_channel)
+
         forum_channel_list = FORUM_CHANNEL_LIST
         forum_channels: List[ForumChannel] = [
             channel for channel in getattr(guild, 'forums', [])
@@ -62,27 +93,43 @@ class LeaderboardManager:
         if not text_channels:
             print("No valid text channels found in the guild.")
             return None, []
-        thread_list = []
+
+        thread_list: List[Thread] = []
+        count_messages_per_forum_channel = Counter()
         for forum_channel in forum_channels:
             try:
-                thread_list.extend(forum_channel.threads)
+                forum_threads = forum_channel.threads
+                thread_list.extend(forum_threads)
+                # Aggregate message count for this forum
+                forum_message_count = 0
+                for thread in forum_threads:
+                    thread_message_count = 0
+                    try:
+                        async for message in thread.history(limit=None, after=days_ago):
+                            thread_message_count += 1
+                            if message.author and not message.author.bot:
+                                count_messages_by_members[message.author] += 1
+                        forum_message_count += thread_message_count
+                    except Exception as e:
+                        print(f"Error processing thread {thread.name}: {e}")
+                    continue
+                count_messages_per_forum_channel[forum_channel.id] = forum_message_count
             except Exception as e:
                 print(f"Error processing forum channel {forum_channel.name}: {e}")
-                continue
-        for thread in thread_list:
-            try:
-                async for message in thread.history(limit=None):
-                    if message.author.id and not message.author.bot:
-                        count_messages_by_members[message.author] += 1
-            except Exception as e:
-                print(f"Error processing thread {thread.name}: {e}")
-                continue
+            continue
+
+        print(f"Message counts per forum channel: {count_messages_per_forum_channel}")
+
+        # Add message count to self.forum_message_counts
+        await self.update_forum_message_counts(guild, count_messages_per_forum_channel)
+
+        
         non_admin_messages = {
             member: count for member, count in count_messages_by_members.items()
             if (
-                isinstance(member, Member)
-                and not ({role.id for role in member.roles} & set(ADMIN_ROLES_IDS))
-                and not any(role.permissions.administrator for role in member.roles)
+            isinstance(member, Member)
+            and not ({role.id for role in member.roles} & set(ADMIN_ROLES_IDS))
+            and not any(role.permissions.administrator for role in member.roles)
             )
         }
         top_ten = Counter(non_admin_messages).most_common(10)
