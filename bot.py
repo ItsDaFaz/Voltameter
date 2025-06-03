@@ -8,6 +8,8 @@ from web.webserver import run_web
 from cogs.voice import VoiceCog 
 from cogs.commands import CommandCog
 from cogs.messages import MessageCog
+import time
+
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 IS_PROD = os.getenv("ENVIRONMENT") == "PRODUCTION"
@@ -87,5 +89,31 @@ async def on_message(message):
 
 if isinstance(TOKEN, str):
     client.run(TOKEN)
+RETRY_DELAY = 60  # seconds
+
+def run_discord_bot():
+    attempt = 1
+    delay = RETRY_DELAY
+    while True:
+        try:
+            print(f"Attempt {attempt}: Starting Discord client...", flush=True)
+            if TOKEN is None:
+                print("TOKEN is required to run the bot")
+                break
+            client.run(TOKEN)
+            break
+        except Exception as e:
+            print(f"Error on attempt {attempt}: {e}", flush=True)
+            if "429" in str(e) or "rate limit" in str(e).lower():
+                delay = max(delay * 2, 900)  # Exponential backoff, at least 15 minutes
+                print(f"Rate limit detected. Backing off for {delay} seconds...", flush=True)
+            else:
+                delay = RETRY_DELAY
+                print(f"Retrying in {delay} seconds...", flush=True)
+            time.sleep(delay)
+            attempt += 1
+
+if isinstance(TOKEN, str) and TOKEN:
+    run_discord_bot()
 else:
     print("TOKEN is required to run the bot")
