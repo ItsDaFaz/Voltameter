@@ -50,13 +50,13 @@ async def on_ready():
     print(f"Logged in as {client.user}")
     if IS_PROD:
         # Start leaderboard tasks if not already running
-        # if hasattr(leaderboard_manager, "auto_leaderboard") and not leaderboard_manager.auto_leaderboard.is_running():
-        #     leaderboard_manager.auto_leaderboard.start()
-        #     print("Auto leaderboard started")
-        # if hasattr(leaderboard_manager, "update_leaderboard_days_task") and not leaderboard_manager.update_leaderboard_days_task.is_running():
-        #     await leaderboard_manager.update_leaderboard_days()
-        #     leaderboard_manager.update_leaderboard_days_task.start()
-        # # Start voice cog tasks if not already running
+        if hasattr(leaderboard_manager, "auto_leaderboard") and not leaderboard_manager.auto_leaderboard.is_running():
+            leaderboard_manager.auto_leaderboard.start()
+            print("Auto leaderboard started")
+        if hasattr(leaderboard_manager, "update_leaderboard_days_task") and not leaderboard_manager.update_leaderboard_days_task.is_running():
+            await leaderboard_manager.update_leaderboard_days()
+            leaderboard_manager.update_leaderboard_days_task.start()
+        # Start voice cog tasks if not already running
         if hasattr(voice_cog, "check_vc_task") and not voice_cog.check_vc_task.is_running():
             voice_cog.check_vc_task.start()
             print("Voice channel check task started")
@@ -65,12 +65,12 @@ async def on_ready():
         
     else:
         # Start leaderboard tasks if not already running
-        if hasattr(leaderboard_manager, "auto_leaderboard") and not leaderboard_manager.auto_leaderboard.is_running():
-            leaderboard_manager.auto_leaderboard.start()
-            print("Auto leaderboard started")
-        if hasattr(leaderboard_manager, "update_leaderboard_days_task") and not leaderboard_manager.update_leaderboard_days_task.is_running():
-            await leaderboard_manager.update_leaderboard_days()
-            leaderboard_manager.update_leaderboard_days_task.start()
+        # if hasattr(leaderboard_manager, "auto_leaderboard") and not leaderboard_manager.auto_leaderboard.is_running():
+        #     leaderboard_manager.auto_leaderboard.start()
+        #     print("Auto leaderboard started")
+        # if hasattr(leaderboard_manager, "update_leaderboard_days_task") and not leaderboard_manager.update_leaderboard_days_task.is_running():
+        #     await leaderboard_manager.update_leaderboard_days()
+        #     leaderboard_manager.update_leaderboard_days_task.start()
         print("Auto leaderboard and voice channel checks are disabled in development mode.")
 
 @client.event
