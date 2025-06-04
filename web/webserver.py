@@ -3,13 +3,13 @@ import uvicorn
 from contextlib import asynccontextmanager
 import os
 from dotenv import load_dotenv
-from db.session import engine  # Use SQLAlchemy engine
+from db.session import get_engine  # Import the engine factory
 
 load_dotenv()  # Load environment variables from .env file
 
 class WebServer:
     def __init__(self):
-        self.engine = engine
+        self.engine = get_engine()  # Create engine in this thread/event loop
         self.app = FastAPI(lifespan=self.lifespan)
         self.setup_routes()
 
