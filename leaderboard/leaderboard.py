@@ -9,7 +9,7 @@ from discord import Guild, TextChannel, ForumChannel, Member, Embed, Color, Thre
 from config import DESTINATION_CHANNEL_ID, DESTINATION_CHANNEL_ID_DEV, GUILD_ID, MR_ELECTRICITY_ROLE_ID, HIGH_VOLTAGE_ROLE_ID, ADMIN_ROLES_IDS, TEXT_CHANNEL_LIST, FORUM_CHANNEL_LIST, EMBED_DESCRIPTION, EMBED_TITLE, EMBED_COLOR
 from utils.helpers import escape_markdown
 
-from db.session import get_async_session
+from db.session import get_engine, get_session_maker
 from db.models import Member as DBMember, Message as DBMessage
 from sqlalchemy import select
 
@@ -30,6 +30,9 @@ class LeaderboardManager:
         self.forum_message_counts = {}
 
         self.is_prod = IS_PROD
+        # Create engine and sessionmaker for this thread/event loop
+        self.engine = get_engine()
+        self.SessionLocal = get_session_maker(self.engine)
 
     async def update_leaderboard_days(self):
         
