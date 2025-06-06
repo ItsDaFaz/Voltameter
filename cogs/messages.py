@@ -2,7 +2,7 @@ import asyncio
 from discord.ext import tasks
 from config import IN_VOICE_ROLE_ID
 from discord import Client, Guild, Member, Message, Role
-from db.models import Member as DBMember, Message as DBMessage
+from db.models import Member as DBMember, Message as DBMessage, Guild as DBGuild
 from sqlalchemy import select
 from datetime import datetime, timezone
 
@@ -24,6 +24,17 @@ class MessageCog:
                 # Database logic: record every message
                 async with self.SessionLocal() as session:
                     try:
+                        if isinstance(message.guild, Guild):
+                        # Ensure guild exists
+                            db_guild = await session.scalar(select(DBGuild).where(DBGuild.id == message.guild.id))
+                            if not db_guild:
+                                db_guild = DBGuild(id=message.guild.id)
+                                session.add(db_guild)
+                                await session.commit()
+                        else:
+                            print(f"Message from {author.name} in a DM or group chat, skipping.", flush=True)
+                            return
+                        
                         # Ensure member exists
                         db_member = await session.scalar(select(DBMember).where(DBMember.id == author.id))
                         if not db_member:
@@ -34,6 +45,7 @@ class MessageCog:
                         db_message = DBMessage(
                             author_id=author.id,
                             timestamp=datetime.now(tz=timezone.utc),
+                            guild=message.guild.id if message.guild else None,
                         )
                         session.add(db_message)
                         await session.commit()
