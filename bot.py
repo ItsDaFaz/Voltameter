@@ -4,7 +4,7 @@ from web.webserver import app as fastapi_app
 import uvicorn
 from dotenv import load_dotenv
 from leaderboard.leaderboard import LeaderboardManager
-
+import traceback
 # Importing cogs
 from cogs.voice import VoiceCog 
 from cogs.commands import CommandCog
@@ -57,30 +57,31 @@ message_cog = MessageCog(client, IS_PROD, SessionLocal)
 async def on_ready():
     print(f"Logged in as {client.user}")
     # Check if client.guilds contains guilds not registered in the database
-    async with SessionLocal() as session:
-        for guild in client.guilds:
-            db_guild = await session.scalar(select(DBGuild).where(DBGuild.id == guild.id))
-            if not db_guild:
-                print(f"Guild {guild.name} ({guild.id}) not found in database, adding it.")
-                id= guild.id
-                name = guild.name
-                text_channels_list=[]
-                forum_channels_list=[]
-                destination_channel_id = 0
-                destination_channel_id_dev = 0
-                new_guild = DBGuild(
-                id=id,  
-                name=name,
-                admin_role_id_list=[],
-                text_channels_list=text_channels_list,
-                forum_channels_list=forum_channels_list,
-                destination_channel_id=destination_channel_id,
-                destination_channel_id_dev=destination_channel_id_dev)
-                print("New guild created:", new_guild)
-                session.add(new_guild)
-                await session.commit()
-            else:
-                print(f"Guild {guild.name} ({guild.id}) already exists in database.")
+    try:
+        async with SessionLocal() as session:
+            for guild in client.guilds:
+                db_guild = await session.scalar(select(DBGuild).where(DBGuild.id == guild.id))
+                if not db_guild:
+                    print(f"Guild {guild.name} ({guild.id}) not found in database, adding it.")
+                    id = guild.id
+                    name = guild.name
+                    new_guild = DBGuild(
+                        id=id,
+                        name=name,
+                        admin_role_id_list=[],
+                        text_channels_list=[],
+                        forum_channels_list=[],
+                        destination_channel_id=None,
+                        destination_channel_id_dev=None
+                    )
+                    print("New guild created:", new_guild)
+                    session.add(new_guild)
+                    await session.commit()
+                else:
+                    print(f"Guild {guild.name} ({guild.id}) already exists in database.")
+    except Exception as e:
+        print(f"Exception in on_ready: {e}", flush=True)
+        # print(traceback.format_exc(), flush=True)
     if IS_PROD:
         if hasattr(leaderboard_manager, "auto_leaderboard") and not leaderboard_manager.auto_leaderboard.is_running():
             leaderboard_manager.auto_leaderboard.start()
