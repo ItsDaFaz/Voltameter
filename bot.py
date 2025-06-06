@@ -4,13 +4,20 @@ from web.webserver import app as fastapi_app
 import uvicorn
 from dotenv import load_dotenv
 from leaderboard.leaderboard import LeaderboardManager
-from db.init_db import init_models
+
+# Importing cogs
 from cogs.voice import VoiceCog 
 from cogs.commands import CommandCog
 from cogs.messages import MessageCog
-from db.session import get_engine, get_session_maker
+
 import os
 import time
+
+# Database imports
+from db.init_db import init_models
+from db.session import get_engine, get_session_maker
+from db.models import Guild as DBGuild
+from sqlalchemy import select
 
 load_dotenv(override=True)
 TOKEN = os.getenv("TOKEN")
@@ -49,6 +56,31 @@ message_cog = MessageCog(client, IS_PROD, SessionLocal)
 @client.event
 async def on_ready():
     print(f"Logged in as {client.user}")
+    # Check if client.guilds contains guilds not registered in the database
+    async with SessionLocal() as session:
+        for guild in client.guilds:
+            db_guild = await session.scalar(select(DBGuild).where(DBGuild.id == guild.id))
+            if not db_guild:
+                print(f"Guild {guild.name} ({guild.id}) not found in database, adding it.")
+                id= guild.id
+                name = guild.name
+                text_channels_list=[]
+                forum_channels_list=[]
+                destination_channel_id = 0
+                destination_channel_id_dev = 0
+                new_guild = DBGuild(
+                id=id,  
+                name=name,
+                admin_role_id_list=[],
+                text_channels_list=text_channels_list,
+                forum_channels_list=forum_channels_list,
+                destination_channel_id=destination_channel_id,
+                destination_channel_id_dev=destination_channel_id_dev)
+                print("New guild created:", new_guild)
+                session.add(new_guild)
+                await session.commit()
+            else:
+                print(f"Guild {guild.name} ({guild.id}) already exists in database.")
     if IS_PROD:
         if hasattr(leaderboard_manager, "auto_leaderboard") and not leaderboard_manager.auto_leaderboard.is_running():
             leaderboard_manager.auto_leaderboard.start()
@@ -61,9 +93,38 @@ async def on_ready():
             print("Voice channel check task started")
     else:
         print("Auto leaderboard and voice channel checks are disabled in development mode.")
-
+@client.event
+async def on_guild_join(guild):
+    async with SessionLocal() as session:
+        db_guild = await session.scalar(select(DBGuild).where(DBGuild.id == guild.id))
+        if not db_guild:
+            print(f"Guild {guild.name} ({guild.id}) not found in database, adding it.")
+            new_guild = DBGuild(
+                id=guild.id,
+                name=guild.name,
+                admin_role_id_list=[],
+                text_channels_list=[],
+                forum_channels_list=[],
+                destination_channel_id=0,
+                destination_channel_id_dev=0
+            )
+            session.add(new_guild)
+            await session.commit()
+        else:
+            print(f"Guild {guild.name} ({guild.id}) already exists in database.")
+@client.event
+async def on_guild_remove(guild):
+    async with SessionLocal() as session:
+        db_guild = await session.scalar(select(DBGuild).where(DBGuild.id == guild.id))
+        if db_guild:
+            print(f"Removing guild {guild.name} ({guild.id}) from database.")
+            await session.delete(db_guild)
+            await session.commit()
+        else:
+            print(f"Guild {guild.name} ({guild.id}) not found in database, nothing to remove.")
 @client.event
 async def on_voice_state_update(member, before, after):
+    
     if IS_PROD:
         await voice_cog.handle_voice_state_update(member, before, after)
     else:
