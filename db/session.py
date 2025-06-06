@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
-load_dotenv()
+load_dotenv(override=True)  # Load environment variables from .env file
 DB_URL = os.getenv("DB_URL", "sqlite+aiosqlite:///./test.db")
 
 print(f"Using database URL in session: {DB_URL}")  # Debugging line to check the DB_URL
