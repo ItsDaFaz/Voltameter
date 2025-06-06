@@ -11,7 +11,7 @@ class Guild(Base):
     admin_role_id_list = Column(ARRAY(BigInteger))
     text_channels_list = Column(ARRAY(BigInteger))
     forum_channels_list = Column(ARRAY(BigInteger))
-    destination_channel_id = Column(BigInteger, nullable=False)
+    destination_channel_id = Column(BigInteger, nullable=True)
     destination_channel_id_dev = Column(BigInteger, nullable=True)
     members = relationship('Member', back_populates='guild')
     messages = relationship('Message', back_populates='guild')
@@ -20,7 +20,7 @@ class Guild(Base):
 class Member(Base):
     __tablename__ = 'members'
     id = Column(BigInteger, primary_key=True, index=True)
-    guild_id = Column(BigInteger, ForeignKey('guilds.id'))  # <-- Add this line
+    guild_id = Column(BigInteger, ForeignKey('guilds.id'), nullable=False)
     messages = relationship('Message', back_populates='author')
     guild = relationship('Guild', back_populates='members')
 
