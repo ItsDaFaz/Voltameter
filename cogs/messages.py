@@ -25,30 +25,53 @@ class MessageCog:
                 async with self.SessionLocal() as session:
                     try:
                         if isinstance(message.guild, Guild):
-                        # Ensure guild exists
+                            # Ensure guild exists
+                            print(f"Checking for guild in DB: id={message.guild.id}, name={message.guild.name}", flush=True)
                             db_guild = await session.scalar(select(DBGuild).where(DBGuild.id == message.guild.id))
                             if not db_guild:
-                                db_guild = DBGuild(id=message.guild.id)
+                                print(f"Guild not found, creating: id={message.guild.id}, name={message.guild.name}", flush=True)
+                                db_guild = DBGuild(id=message.guild.id, name=message.guild.name)
                                 session.add(db_guild)
-                                await session.commit()
+                                try:
+                                    await session.commit()
+                                    print(f"Guild added to DB: {db_guild}", flush=True)
+                                except Exception as e:
+                                    print(f"Error adding guild: {e}", flush=True)
+                                    await session.rollback()
+                            else:
+                                print(f"Guild already exists in DB: {db_guild}", flush=True)
                         else:
                             print(f"Message from {author.name} in a DM or group chat, skipping.", flush=True)
                             return
-                        
                         # Ensure member exists
+                        print(f"Checking for member in DB: id={author.id}, guild_id={message.guild.id}", flush=True)
                         db_member = await session.scalar(select(DBMember).where(DBMember.id == author.id))
                         if not db_member:
-                            db_member = DBMember(id=author.id)
+                            print(f"Member not found, creating: id={author.id}, guild_id={message.guild.id}", flush=True)
+                            db_member = DBMember(id=author.id, guild_id=message.guild.id)
                             session.add(db_member)
-                            await session.commit()
+                            try:
+                                await session.commit()
+                                print(f"Member added to DB: {db_member}", flush=True)
+                            except Exception as e:
+                                print(f"Error adding member: {e}", flush=True)
+                                await session.rollback()
+                        else:
+                            print(f"Member already exists in DB: {db_member}", flush=True)
                         # Insert message
+                        print(f"Adding message to DB: author_id={author.id}, guild_id={message.guild.id}", flush=True)
                         db_message = DBMessage(
                             author_id=author.id,
                             timestamp=datetime.now(tz=timezone.utc),
-                            guild=message.guild.id if message.guild else None,
+                            guild_id=message.guild.id if message.guild else None,
                         )
                         session.add(db_message)
-                        await session.commit()
+                        try:
+                            await session.commit()
+                            print(f"Message added to DB: {db_message}", flush=True)
+                        except Exception as e:
+                            print(f"Error adding message: {e}", flush=True)
+                            await session.rollback()
                     except Exception as e:
                         print(f"DB error: {e}", flush=True)
                         await session.rollback()
