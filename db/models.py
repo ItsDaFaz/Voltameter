@@ -28,7 +28,7 @@ class Message(Base):
     __tablename__ = 'messages'
     id = Column(BigInteger, primary_key=True, index=True)
     author_id = Column(BigInteger, ForeignKey('members.id'))
-    guild_id = Column(BigInteger, ForeignKey('guilds.id'))  # <-- Add this line
+    guild_id = Column(BigInteger, ForeignKey('guilds.id'))  
     timestamp = Column(DateTime(timezone=True), nullable=False)
     guild = relationship('Guild', back_populates='messages')
     author = relationship('Member', back_populates='messages')
