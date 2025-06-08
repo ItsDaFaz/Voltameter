@@ -9,6 +9,7 @@ import traceback
 from cogs.voice import VoiceCog 
 from cogs.commands import CommandCog
 from cogs.messages import MessageCog
+from cogs.db import DBManager
 
 import os
 import time
@@ -52,46 +53,35 @@ leaderboard_manager = LeaderboardManager(client, IS_PROD)
 voice_cog = VoiceCog(client, IS_PROD)
 command_cog = CommandCog(client, leaderboard_manager, IS_PROD)
 message_cog = MessageCog(client, IS_PROD, SessionLocal)
-
+db_manager = DBManager(client, IS_PROD, SessionLocal)
 @client.event
 async def on_ready():
     print(f"Logged in as {client.user}")
     # Check if client.guilds contains guilds not registered in the database
     try:
-        async with SessionLocal() as session:
-            for guild in client.guilds:
-                db_guild = await session.scalar(select(DBGuild).where(DBGuild.id == guild.id))
-                if not db_guild:
-                    print(f"Guild {guild.name} ({guild.id}) not found in database, adding it.")
-                    id = guild.id
-                    name = guild.name
-                    new_guild = DBGuild(
-                        id=id,
-                        name=name,
-                        admin_role_id_list=[],
-                        text_channels_list=[],
-                        forum_channels_list=[],
-                        destination_channel_id=None,
-                        destination_channel_id_dev=None
-                    )
-                    print("New guild created:", new_guild)
-                    session.add(new_guild)
-                    await session.commit()
-                else:
-                    print(f"Guild {guild.name} ({guild.id}) already exists in database.")
+        for guild in client.guilds:
+            await db_manager.add_guild(guild)
     except Exception as e:
         print(f"Exception in on_ready: {e}", flush=True)
         # print(traceback.format_exc(), flush=True)
+    
+    
     if IS_PROD:
+        
+        if hasattr(voice_cog, "check_vc_task") and not voice_cog.check_vc_task.is_running():
+            voice_cog.check_vc_task.start()
+            print("Voice channel check task started")
         if hasattr(leaderboard_manager, "auto_leaderboard") and not leaderboard_manager.auto_leaderboard.is_running():
             leaderboard_manager.auto_leaderboard.start()
             print("Auto leaderboard started")
         if hasattr(leaderboard_manager, "update_leaderboard_days_task") and not leaderboard_manager.update_leaderboard_days_task.is_running():
             await leaderboard_manager.update_leaderboard_days()
             leaderboard_manager.update_leaderboard_days_task.start()
-        if hasattr(voice_cog, "check_vc_task") and not voice_cog.check_vc_task.is_running():
-            voice_cog.check_vc_task.start()
-            print("Voice channel check task started")
+
+        if hasattr(db_manager, "cleanup_old_messages_task") and not db_manager.cleanup_old_messages.is_running():
+            db_manager.cleanup_old_messages.start()
+            print("Old messages cleanup task started")
+        
     else:
         print("Auto leaderboard and voice channel checks are disabled in development mode.")
 @client.event
