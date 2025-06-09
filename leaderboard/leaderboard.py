@@ -187,14 +187,16 @@ class LeaderboardManager:
                 db_count = db_message_counts[int(member.id)] if int(member.id) in db_message_counts else 0
                 db_message_points = db_count * self.voice_voltage_multiplier
 
+                # Boost value: the extra points from being in voice (difference between 5x and 3x for db_count)
+                boost_value = db_count * (self.voice_voltage_multiplier - self.voltage_multiplier)
+
                 # Total points
-                total_points = channel_message_points + db_message_points
+                total_points = channel_message_points + boost_value
 
                 memberName = escape_markdown(member.display_name)
                 embed_content += f"`{idx+1}` **{memberName}** — `{total_points}` volt"
-                if db_message_points != 0:
-                    print(f"[DB_MESSAGE FOUND] Member {memberName} has {db_message_points} points from DB messages. {channel_message_points} - {db_message_points} = {total_points}", flush=True)
-                    embed_content += f"\t <:_:1380603159906619452> `+{channel_message_points-db_message_points}`"
+                if boost_value != 0:
+                    embed_content += f"\t<:_:1380603159906619452> `+{boost_value}`"
                 embed_content += "\n"
                 top_ten_list.append(member.id)
         embed_content += f"\nBased on last `{str(await self.get_leaderboard_days())}` **days** of messaging activities."
