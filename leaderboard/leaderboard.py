@@ -193,6 +193,7 @@ class LeaderboardManager:
                 memberName = escape_markdown(member.display_name)
                 embed_content += f"`{idx+1}` **{memberName}** — `{total_points}` volt"
                 if db_message_points != 0:
+                    print(f"[DB_MESSAGE FOUND] Member {memberName} has {db_message_points} points from DB messages. {channel_message_points} - {db_message_points} = {total_points}", flush=True)
                     embed_content += f"\t <:_:1380603159906619452> `+{channel_message_points-db_message_points}`"
                 embed_content += "\n"
                 top_ten_list.append(member.id)
