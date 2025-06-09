@@ -5,6 +5,7 @@ from discord import Client, Guild, Member, Message, Role
 from db.models import Member as DBMember, Message as DBMessage, Guild as DBGuild
 from sqlalchemy import select
 from datetime import datetime, timezone
+from utils.helpers import async_db_retry
 
 class MessageCog:
     def __init__(self, client, is_prod, SessionLocal):
@@ -13,6 +14,7 @@ class MessageCog:
         self.is_prod = is_prod
         self.SessionLocal = SessionLocal
         
+    @async_db_retry()
     async def on_message(self, message: Message):
         if self.is_prod: 
             author = message.author
@@ -80,6 +82,7 @@ class MessageCog:
         else:
             print("Message processing is disabled in development mode.")
             
+    @async_db_retry()
     async def on_message_delete(self, message: Message):
         if self.is_prod:
             async with self.SessionLocal() as session:

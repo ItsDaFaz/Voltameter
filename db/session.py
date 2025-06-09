@@ -8,7 +8,7 @@ DB_URL = os.getenv("DB_URL", "sqlite+aiosqlite:///./test.db")
 print(f"Using database URL in session: {DB_URL}")  # Debugging line to check the DB_URL
 
 def get_engine():
-    return create_async_engine(DB_URL, echo=True, future=True)
+    return create_async_engine(DB_URL, echo=True, future=True, pool_pre_ping=True)
 
 def get_session_maker(engine):
     return async_sessionmaker(engine, expire_on_commit=False)

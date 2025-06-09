@@ -7,7 +7,7 @@ import discord
 from discord.ext import tasks
 from discord import Guild, TextChannel, ForumChannel, Member, Embed, Color, Thread, Role, VoiceChannel
 from config import  DESTINATION_CHANNEL_ID as DESTINATION_CHANNEL_ID, GUILD_ID, MR_ELECTRICITY_ROLE_ID, HIGH_VOLTAGE_ROLE_ID, ADMIN_ROLES_IDS, TEXT_CHANNEL_LIST, FORUM_CHANNEL_LIST, EMBED_DESCRIPTION, EMBED_TITLE, EMBED_COLOR
-from utils.helpers import escape_markdown
+from utils.helpers import escape_markdown, async_db_retry
 
 from db.session import get_engine, get_session_maker
 from db.models import Member as DBMember, Message as DBMessage
@@ -68,6 +68,35 @@ class LeaderboardManager:
         async with self.leaderboard_lock:
             return self.forum_message_counts.get(guild.id, Counter())
 
+    @async_db_retry()
+    async def fetch_leaderboard_db_data(self, guild: Guild, member_ids: List[int]):
+        """
+        Fetch members and message counts from the database for the given guild and member IDs.
+        Returns (db_members, db_message_counts)
+        """
+        async with self.SessionLocal() as session:
+            try:
+                members = await session.scalars(select(DBMember).where(DBMember.guild_id == guild.id))
+                db_members = members.all()
+            except Exception as e:
+                print(f"Error fetching members from DB: {e}")
+                return [], {}
+
+            db_message_counts = {}
+            if member_ids:
+                try:
+                    result = await session.execute(
+                        select(DBMessage.author_id, func.count(DBMessage.id))
+                        .where(
+                            DBMessage.author_id.in_(member_ids),
+                            DBMessage.guild_id == guild.id
+                        )
+                        .group_by(DBMessage.author_id)
+                    )
+                    db_message_counts = {int(row[0]): int(row[1]) for row in result}
+                except Exception as e:
+                    print(f"Error fetching message counts from DB: {e}")
+            return db_members, db_message_counts
 
     async def generate_leaderboard_embed(self, guild: Guild):
         days_ago = datetime.now(tz=timezone.utc) - timedelta(days=await self.get_leaderboard_days())
@@ -134,45 +163,20 @@ class LeaderboardManager:
 
         await self.update_forum_message_counts(guild, count_messages_per_forum_channel)
 
-        # Fetch members from DB
-        async with self.SessionLocal() as session:
-            try:
-                members = await session.scalars(select(DBMember).where(DBMember.guild_id == guild.id))
-                db_members = members.all()
-            except Exception as e:
-                print(f"Error fetching members from DB: {e}")
-                return None, []
+        # Filter members not with admin roles
+        non_admin_messages = {
+            member: count for member, count in count_messages_by_members.items()
+            if (
+                isinstance(member, Member)
+                and not ({role.id for role in member.roles} & set(ADMIN_ROLES_IDS))
+                and not any(role.permissions.administrator for role in member.roles)
+            )
+        }
+        top_ten = Counter(non_admin_messages).most_common(10)
 
-            # Filter members not with admin roles
-            non_admin_messages = {
-                member: count for member, count in count_messages_by_members.items()
-                if (
-                    isinstance(member, Member)
-                    and not ({role.id for role in member.roles} & set(ADMIN_ROLES_IDS))
-                    and not any(role.permissions.administrator for role in member.roles)
-                )
-                # if (
-                #     isinstance(member, Member)
-                # )
-            }
-            top_ten = Counter(non_admin_messages).most_common(10)
-
-            # Efficiently fetch DB message counts for these members (messages sent in voice)
-            member_ids = [member.id for member, _ in top_ten if isinstance(member, Member)]
-            db_message_counts = {}
-            if member_ids:
-                try:
-                    result = await session.execute(
-                        select(DBMessage.author_id, func.count(DBMessage.id))
-                        .where(
-                            DBMessage.author_id.in_(member_ids),
-                            DBMessage.guild_id == guild.id
-                        )
-                        .group_by(DBMessage.author_id)
-                    )
-                    db_message_counts = {int(row[0]): int(row[1]) for row in result}
-                except Exception as e:
-                    print(f"Error fetching message counts from DB: {e}")
+        # Efficiently fetch DB message counts for these members (messages sent in voice)
+        member_ids = [member.id for member, _ in top_ten if isinstance(member, Member)]
+        db_members, db_message_counts = await self.fetch_leaderboard_db_data(guild, member_ids)
 
         embed = Embed(
             title=EMBED_TITLE,
