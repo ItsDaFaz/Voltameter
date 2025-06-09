@@ -6,8 +6,14 @@ from typing import Optional, List
 import discord
 from discord.ext import tasks
 from discord import Guild, TextChannel, ForumChannel, Member, Embed, Color, Thread, Role, VoiceChannel
-from config import DESTINATION_CHANNEL_ID, DESTINATION_CHANNEL_ID_DEV, GUILD_ID, MR_ELECTRICITY_ROLE_ID, HIGH_VOLTAGE_ROLE_ID, ADMIN_ROLES_IDS, TEXT_CHANNEL_LIST, FORUM_CHANNEL_LIST, EMBED_DESCRIPTION, EMBED_TITLE, EMBED_COLOR
+from config import  DESTINATION_CHANNEL_ID as DESTINATION_CHANNEL_ID, GUILD_ID, MR_ELECTRICITY_ROLE_ID, HIGH_VOLTAGE_ROLE_ID, ADMIN_ROLES_IDS, TEXT_CHANNEL_LIST, FORUM_CHANNEL_LIST, EMBED_DESCRIPTION, EMBED_TITLE, EMBED_COLOR
 from utils.helpers import escape_markdown
+
+from db.session import get_engine, get_session_maker
+from db.models import Member as DBMember, Message as DBMessage
+from sqlalchemy import select, func
+
+
 
 
 
@@ -18,12 +24,18 @@ class LeaderboardManager:
         self.leaderboard_days = 5
         self.leaderboard_lock = asyncio.Lock()
         self.cached_leaderboard_embed = None
+        self.voltage_multiplier = 3  # Multiplier for volt calculation
+        self.voice_voltage_multiplier = 5  # Multiplier for voice channel volt calculation
 
         # Channel message counts
         self.channel_message_counts = {}
         self.forum_message_counts = {}
 
         self.is_prod = IS_PROD
+        # self.is_prod = True  # For testing purposes
+        # Create engine and sessionmaker for this thread/event loop
+        self.engine = get_engine()
+        self.SessionLocal = get_session_maker(self.engine)
 
     async def update_leaderboard_days(self):
         
@@ -60,7 +72,6 @@ class LeaderboardManager:
             channel for channel in guild.channels
             if isinstance(channel, (TextChannel, VoiceChannel)) and channel.id in channel_list
         ]
-        # Output the names of the channels from the ids found in TEXT_CHANNEL_LIST
         channel_names = [channel.name for channel in text_channels]
         print(f"Selected text channels: {channel_names}")
         count_messages_by_members = Counter()
@@ -76,7 +87,6 @@ class LeaderboardManager:
             continue
         print(f"Message counts per channel: {count_messages_per_channel}")
 
-        # Add message count to self.channel_message_counts
         await self.update_channel_message_counts(guild, count_messages_per_channel)
 
         forum_channel_list = FORUM_CHANNEL_LIST
@@ -84,7 +94,6 @@ class LeaderboardManager:
             channel for channel in getattr(guild, 'forums', [])
             if isinstance(channel, ForumChannel) and channel.id in forum_channel_list
         ]
-        # Output the names of the forum channels from the ids found in FORUM_CHANNEL_LIST
         forum_channel_names = [channel.name for channel in forum_channels]
         print(f"Selected forum channels: {forum_channel_names}")
         if not forum_channels:
@@ -100,7 +109,6 @@ class LeaderboardManager:
             try:
                 forum_threads = forum_channel.threads
                 thread_list.extend(forum_threads)
-                # Aggregate message count for this forum
                 forum_message_count = 0
                 for thread in forum_threads:
                     thread_message_count = 0
@@ -120,19 +128,49 @@ class LeaderboardManager:
 
         print(f"Message counts per forum channel: {count_messages_per_forum_channel}")
 
-        # Add message count to self.forum_message_counts
         await self.update_forum_message_counts(guild, count_messages_per_forum_channel)
 
-        
-        non_admin_messages = {
-            member: count for member, count in count_messages_by_members.items()
-            if (
-            isinstance(member, Member)
-            and not ({role.id for role in member.roles} & set(ADMIN_ROLES_IDS))
-            and not any(role.permissions.administrator for role in member.roles)
-            )
-        }
-        top_ten = Counter(non_admin_messages).most_common(10)
+        # Fetch members from DB
+        async with self.SessionLocal() as session:
+            try:
+                members = await session.scalars(select(DBMember).where(DBMember.guild_id == guild.id))
+                db_members = members.all()
+            except Exception as e:
+                print(f"Error fetching members from DB: {e}")
+                return None, []
+
+            # Filter members not with admin roles
+            non_admin_messages = {
+                member: count for member, count in count_messages_by_members.items()
+                if (
+                    isinstance(member, Member)
+                    and not ({role.id for role in member.roles} & set(ADMIN_ROLES_IDS))
+                    and not any(role.permissions.administrator for role in member.roles)
+                )
+                # if (
+                #     isinstance(member, Member)
+                # )
+            }
+            top_ten = Counter(non_admin_messages).most_common(10)
+
+            # Efficiently fetch DB message counts for these members
+            member_ids = [member.id for member, _ in top_ten if isinstance(member, Member)]
+            db_message_counts = {}
+            if member_ids:
+                try:
+                    result = await session.execute(
+                        select(DBMessage.author_id, func.count(DBMessage.id))
+                        .where(
+                            DBMessage.author_id.in_(member_ids),
+                            DBMessage.guild_id == guild.id
+                        )
+                        .group_by(DBMessage.author_id)
+                    )
+                    # Convert result to a dict with int keys and int values
+                    db_message_counts = {int(row[0]): int(row[1]) for row in result}
+                except Exception as e:
+                    print(f"Error fetching message counts from DB: {e}")
+
         embed = Embed(
             title=EMBED_TITLE,
             description=EMBED_DESCRIPTION,
@@ -142,8 +180,21 @@ class LeaderboardManager:
         top_ten_list = []
         for idx, (member, count) in enumerate(top_ten):
             if isinstance(member, Member):
+                # Messages from channel/forum history (multiplied by 3)
+                channel_message_points = count * self.voltage_multiplier
+
+                # Messages from DB (multiplied by 5)
+                db_count = db_message_counts[int(member.id)] if int(member.id) in db_message_counts else 0
+                db_message_points = db_count * self.voice_voltage_multiplier
+
+                # Total points
+                total_points = channel_message_points + db_message_points
+
                 memberName = escape_markdown(member.display_name)
-                embed_content += f"`{idx+1}` **{memberName}** — `{count*3}` volt\n"
+                embed_content += f"`{idx+1}` **{memberName}** — `{total_points}` volt"
+                if db_message_points != 0:
+                    embed_content += f"\t<:_:1380603159906619452>`+{db_message_points}`"
+                embed_content += "\n"
                 top_ten_list.append(member.id)
         embed_content += f"\nBased on last `{str(await self.get_leaderboard_days())}` **days** of messaging activities."
         if not embed_content:
@@ -192,6 +243,8 @@ class LeaderboardManager:
                 print(f"Error cleaning previous messages: {e}")
             self.cached_leaderboard_embed = embed
             await destination_channel.send(embed=embed)
+            
+            #Role assignment logic
             mr_electricity_role: Optional[Role] = discord.utils.get(guild.roles, id=MR_ELECTRICITY_ROLE_ID)
             high_voltage_role: Optional[Role] = discord.utils.get(guild.roles, id=HIGH_VOLTAGE_ROLE_ID)
             if not high_voltage_role or not mr_electricity_role:
@@ -239,6 +292,7 @@ class LeaderboardManager:
                         print(f"Error adding Mr. Electricity to {current_top_member.name}: {e}", flush=True)
             except Exception as e:
                 print(f"Unexpected error during role management: {e}", flush=True)
+            # Role management logic end
         except Exception as e:
             print(f"Error in auto leaderboard task: {e}, will retry in 5 minutes.",flush=True)
 
