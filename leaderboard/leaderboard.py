@@ -37,6 +37,10 @@ class LeaderboardManager:
         self.engine = get_engine()
         self.SessionLocal = get_session_maker(self.engine)
 
+        # Global multipliers
+        self.text_multiplier = 3
+        self.in_voice_boost_multiplier = 2
+
     async def update_leaderboard_days(self):
         
         async with self.leaderboard_lock:
@@ -153,7 +157,7 @@ class LeaderboardManager:
             }
             top_ten = Counter(non_admin_messages).most_common(10)
 
-            # Efficiently fetch DB message counts for these members
+            # Efficiently fetch DB message counts for these members (messages sent in voice)
             member_ids = [member.id for member, _ in top_ten if isinstance(member, Member)]
             db_message_counts = {}
             if member_ids:
@@ -166,7 +170,6 @@ class LeaderboardManager:
                         )
                         .group_by(DBMessage.author_id)
                     )
-                    # Convert result to a dict with int keys and int values
                     db_message_counts = {int(row[0]): int(row[1]) for row in result}
                 except Exception as e:
                     print(f"Error fetching message counts from DB: {e}")
@@ -180,23 +183,17 @@ class LeaderboardManager:
         top_ten_list = []
         for idx, (member, count) in enumerate(top_ten):
             if isinstance(member, Member):
-                # Messages from channel/forum history (multiplied by 3)
-                channel_message_points = count * self.voltage_multiplier
-
-                # Messages from DB (multiplied by 5)
-                db_count = db_message_counts[int(member.id)] if int(member.id) in db_message_counts else 0
-                db_message_points = db_count * self.voice_voltage_multiplier
-
-                # Boost value: the extra points from being in voice (difference between 5x and 3x for db_count)
-                boost_value = db_count * (self.voice_voltage_multiplier - self.voltage_multiplier)
-
-                # Total points
-                total_points = channel_message_points + boost_value
-
+                # Text volt: all messages (from history) x text_multiplier
+                text_volt = count * self.text_multiplier
+                # In-voice boost: messages in voice (from DB) x in_voice_boost_multiplier
+                in_voice_count = db_message_counts[int(member.id)] if int(member.id) in db_message_counts else 0
+                in_voice_boost = in_voice_count * self.in_voice_boost_multiplier
+                # Total volt
+                total_volt = text_volt + in_voice_boost
                 memberName = escape_markdown(member.display_name)
-                embed_content += f"`{idx+1}` **{memberName}** — `{total_points}` volt"
-                if boost_value != 0:
-                    embed_content += f"\t<:_:1380603159906619452> `+{boost_value}`"
+                embed_content += f"`{idx+1}` **{memberName}** — `{total_volt}` volt"
+                if in_voice_boost != 0:
+                    embed_content += f"\t<:_:1380603159906619452> `+{in_voice_boost}`"
                 embed_content += "\n"
                 top_ten_list.append(member.id)
         embed_content += f"\nBased on last `{str(await self.get_leaderboard_days())}` **days** of messaging activities."
@@ -208,7 +205,7 @@ class LeaderboardManager:
         embed.set_footer(text="© Codebound")
         return embed, top_ten_list
 
-    @tasks.loop(minutes=5)
+    @tasks.loop(minutes=30)
     async def auto_leaderboard(self):
         try:
             guild: Optional[Guild] = self.client.get_guild(GUILD_ID)
