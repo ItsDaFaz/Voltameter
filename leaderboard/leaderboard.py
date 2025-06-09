@@ -193,8 +193,7 @@ class LeaderboardManager:
                 memberName = escape_markdown(member.display_name)
                 embed_content += f"`{idx+1}` **{memberName}** — `{total_points}` volt"
                 if db_message_points != 0:
-                    invisible = "\u200B"
-                    embed_content += f"{invisible}<:_:1380603159906619452>{invisible}`+{channel_message_points-db_message_points}`"
+                    embed_content += f"\t <:_:1380603159906619452> `+{channel_message_points-db_message_points}`"
                 embed_content += "\n"
                 top_ten_list.append(member.id)
         embed_content += f"\nBased on last `{str(await self.get_leaderboard_days())}` **days** of messaging activities."
