@@ -8,12 +8,13 @@ from datetime import datetime, timezone
 
 class MessageCog:
     def __init__(self, client, is_prod, SessionLocal):
+        
         self.client = client
         self.is_prod = is_prod
         self.SessionLocal = SessionLocal
         
     async def on_message(self, message: Message):
-        if not self.is_prod: #Temporarily keep it for development
+        if self.is_prod: 
             author = message.author
             in_voice = isinstance(author, Member) and author.get_role(IN_VOICE_ROLE_ID) is not None
             if author.bot:
@@ -78,3 +79,20 @@ class MessageCog:
                         print(f"Message from {author.name}, In Voice: {in_voice}",flush=True)
         else:
             print("Message processing is disabled in development mode.")
+            
+    async def on_message_delete(self, message: Message):
+        if self.is_prod:
+            async with self.SessionLocal() as session:
+                try:
+                    db_message = await session.scalar(select(DBMessage).where(DBMessage.id == message.id))
+                    if db_message:
+                        await session.delete(db_message)
+                        await session.commit()
+                        print(f"Deleted message from DB: {db_message}", flush=True)
+                    else:
+                        print(f"Message not found in DB: id={message.id}", flush=True)
+                except Exception as e:
+                    print(f"Error deleting message: {e}", flush=True)
+                    await session.rollback()
+        else:
+            print("Message deletion processing is disabled in development mode.")
