@@ -59,7 +59,7 @@ class DBManager(commands.Cog):
             print(f"Exception in add_guild: {e}", flush=True)
             # print(traceback.format_exc(), flush=True)
 
-    @tasks.loop(hours=60)
+    @tasks.loop(hours=24)
     async def cleanup_old_messages(self):
         async with self.SessionLocal() as session:
             # Clear messages older than 10 days
