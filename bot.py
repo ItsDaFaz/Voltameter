@@ -87,22 +87,12 @@ async def on_ready():
 @client.event
 async def on_guild_join(guild):
     async with SessionLocal() as session:
-        db_guild = await session.scalar(select(DBGuild).where(DBGuild.id == guild.id))
-        if not db_guild:
-            print(f"Guild {guild.name} ({guild.id}) not found in database, adding it.")
-            new_guild = DBGuild(
-                id=guild.id,
-                name=guild.name,
-                admin_role_id_list=[],
-                text_channels_list=[],
-                forum_channels_list=[],
-                destination_channel_id=0,
-                destination_channel_id_dev=0
-            )
-            session.add(new_guild)
-            await session.commit()
-        else:
-            print(f"Guild {guild.name} ({guild.id}) already exists in database.")
+        try:
+            await db_manager.add_guild(guild)
+        except Exception as e:
+            print(f"Exception in on_guild_join: {e}", flush=True)
+            # print(traceback.format_exc(), flush=True)
+        
 @client.event
 async def on_guild_remove(guild):
     async with SessionLocal() as session:
@@ -127,6 +117,13 @@ async def on_message(message):
         await message_cog.on_message(message)
     else:
         print("Message processing is disabled in development mode.")
+
+@client.event
+async def on_message_delete(message):
+    if not IS_PROD:
+        await message_cog.on_message_delete(message)
+    else:
+        print("Message deletion processing is disabled in development mode.")
 
 async def run_web():
     config = uvicorn.Config(fastapi_app, host="0.0.0.0", port=8080, log_level="info")
