@@ -113,14 +113,14 @@ async def on_voice_state_update(member, before, after):
 
 @client.event
 async def on_message(message):
-    if not IS_PROD:
+    if IS_PROD:
         await message_cog.on_message(message)
     else:
         print("Message processing is disabled in development mode.")
 
 @client.event
 async def on_message_delete(message):
-    if not IS_PROD:
+    if IS_PROD:
         await message_cog.on_message_delete(message)
     else:
         print("Message deletion processing is disabled in development mode.")
