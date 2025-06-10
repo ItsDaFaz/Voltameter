@@ -183,21 +183,34 @@ class LeaderboardManager:
             description=EMBED_DESCRIPTION,
             color=Color.from_str(EMBED_COLOR),
         )
+        # Calculate total volt for each member and sort accordingly
+        leaderboard_entries = []
+        for member, count in top_ten:
+            if isinstance(member, Member):
+                text_volt = count * self.text_multiplier
+                in_voice_count = db_message_counts.get(int(member.id), 0)
+                in_voice_boost = in_voice_count * self.in_voice_boost_multiplier
+                total_volt = text_volt + in_voice_boost
+                leaderboard_entries.append({
+                    "member": member,
+                    "text_volt": text_volt,
+                    "in_voice_boost": in_voice_boost,
+                    "total_volt": total_volt,
+                })
+
+        # Sort by total_volt descending
+        leaderboard_entries.sort(key=lambda x: x["total_volt"], reverse=True)
+
         embed_content = ""
         top_ten_list = []
-        for idx, (member, count) in enumerate(top_ten):
-            if isinstance(member, Member):
-                # Text volt: all messages (from history) x text_multiplier
-                text_volt = count * self.text_multiplier
-                # In-voice boost: messages in voice (from DB) x in_voice_boost_multiplier
-                in_voice_count = db_message_counts[int(member.id)] if int(member.id) in db_message_counts else 0
-                in_voice_boost = in_voice_count * self.in_voice_boost_multiplier
-                # Total volt
-                total_volt = text_volt + in_voice_boost
-                memberName = escape_markdown(member.display_name)
-                embed_content += f"`{idx+1}` **{memberName}** — `{total_volt}` volt"
-                if in_voice_boost != 0:
-                    embed_content += f"\t<:_:1380603159906619452> `+{in_voice_boost}`"
+        for idx, entry in enumerate(leaderboard_entries):
+            member = entry["member"]
+            total_volt = entry["total_volt"]
+            in_voice_boost = entry["in_voice_boost"]
+            memberName = escape_markdown(member.display_name)
+            embed_content += f"`{idx+1}` **{memberName}** — `{total_volt}` volt"
+            if in_voice_boost != 0:
+                embed_content += f"\t<:_:1380603159906619452> `+{in_voice_boost}`"
                 embed_content += "\n"
                 top_ten_list.append(member.id)
         embed_content += f"\nBased on last `{str(await self.get_leaderboard_days())}` **days** of messaging activities."
