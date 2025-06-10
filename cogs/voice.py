@@ -32,11 +32,21 @@ class VoiceCog:
                         print(f"Failed to add role to {member.name}: {e}")
             else:
                 if role in member.roles:
-                    try:
-                        await member.remove_roles(role, reason="Left VC")
-                        print(f"{member.name} had 'In Voice' role removed.")
-                    except Exception as e:
-                        print(f"Failed to remove role from {member.name}: {e}")
+                    # Start cooldown before removing role
+                    async def delayed_remove():
+                        await asyncio.sleep(10)
+                        # Re-fetch member to get latest state
+                        refreshed_member = await member.guild.fetch_member(member.id)
+                        print(f"Checking if {refreshed_member.name} is still in VC after cooldown.")
+                        if not refreshed_member.voice or not refreshed_member.voice.channel:
+                            try:
+                                await refreshed_member.remove_roles(role, reason="Left VC (after cooldown)")
+                                print(f"{refreshed_member.name} had 'In Voice' role removed after cooldown.")
+                            except Exception as e:
+                                print(f"Failed to remove role from {refreshed_member.name}: {e}")
+                        else:
+                            print(f"{refreshed_member.name} rejoined a VC during cooldown, not removing role.")
+                    asyncio.create_task(delayed_remove())
         else:
             print("Auto leaderboard and voice channel checks are disabled in development mode.")
 
