@@ -211,8 +211,9 @@ class LeaderboardManager:
             embed_content += f"`{idx+1}` **{memberName}** — `{total_volt}` volt"
             if in_voice_boost != 0:
                 embed_content += f"\t<:_:1380603159906619452> `+{in_voice_boost}`"
-                embed_content += "\n"
+                
                 top_ten_list.append(member.id)
+            embed_content += "\n"
         embed_content += f"\nBased on last `{str(await self.get_leaderboard_days())}` **days** of messaging activities."
         if not embed_content:
             return None, []
