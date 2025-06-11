@@ -37,11 +37,11 @@ class VoiceCog:
                         await asyncio.sleep(10)
                         # Re-fetch member to get latest state
                         refreshed_member = await member.guild.fetch_member(member.id)
-                        print(f"Checking if {refreshed_member.name} is still in VC after cooldown.")
+                        print(f"Checking if {refreshed_member.name} is still in VC after cooldown.", flush=True)
                         if not refreshed_member.voice or not refreshed_member.voice.channel:
                             try:
                                 await refreshed_member.remove_roles(role, reason="Left VC (after cooldown)")
-                                print(f"{refreshed_member.name} had 'In Voice' role removed after cooldown.")
+                                print(f"{refreshed_member.name} had 'In Voice' role removed after cooldown.", flush=True)
                             except Exception as e:
                                 print(f"Failed to remove role from {refreshed_member.name}: {e}")
                         else:
