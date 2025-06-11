@@ -53,37 +53,42 @@ class VoiceCog:
     async def check_vc(self):
         if self.is_prod:
             await self.client.wait_until_ready()
-            # print("Checking voice channels...")
             for guild in self.client.guilds:
                 role = guild.get_role(IN_VOICE_ROLE_ID)
                 if not role:
-                    print(f"Role ID {IN_VOICE_ROLE_ID} not found in guild: {guild.name}")
+                    print(f"Role ID {IN_VOICE_ROLE_ID} not found in guild: {guild.name}", flush=True)
                     continue
-                #Get all members in voice channels
-                members_in_vc = {
-                    member for vc in guild.voice_channels for member in vc.members
-                }
-                #print(f"Members in VC: [{', '.join(f'{member.name} (bot={member.bot})' for member in members_in_vc)}],")
+
+                # Get all members currently in any voice channel
+                members_in_vc = {member for vc in guild.voice_channels for member in vc.members}
+
+                # Add the role to members in VC who don't have it
+                for member in members_in_vc:
+                    if member.bot:
+                        continue
+                    if role not in member.roles:
+                        try:
+                            await member.add_roles(role, reason="Joined VC (auto-check)")
+                            print(f"Added 'In Voice' to {member.name} (in VC, didn't have role)", flush=True)
+                        except Exception as e:
+                            print(f"Failed to add role to {member.name}: {e}", flush=True)
+
+                # Remove the role from members who have it but are not in VC
                 for member in role.members:
                     if member.bot:
-                        print(f"{member.display_name} is a bot, removing role.")
+                        print(f"{member.display_name} is a bot, removing role.", flush=True)
                         try:
                             await member.remove_roles(role, reason="Bot in VC")
-                            print(f"Removed 'In Voice' from {member.name}")
+                            print(f"Removed 'In Voice' from {member.name} (bot)", flush=True)
                         except Exception as e:
-                            print(f"Failed to remove role from {member.name}: {e}")
+                            print(f"Failed to remove role from {member.name}: {e}", flush=True)
+                        continue
                     if member not in members_in_vc:
                         try:
-                            await member.remove_roles(role, reason="Not in voice channel")
-                            print(f"Removed 'In Voice' from {member.name}")
+                            await member.remove_roles(role, reason="Not in voice channel (auto-check)")
+                            print(f"Removed 'In Voice' from {member.name} (not in VC)", flush=True)
                         except Exception as e:
-                            print(f"Failed to remove role from {member.name}: {e}")
-                    elif member in members_in_vc and role not in member.roles:
-                        try:
-                            await member.add_roles(role, reason="Joined VC")
-                            print(f"Added 'In Voice' to {member.name}")
-                        except Exception as e:
-                            print(f"Failed to add role to {member.name}: {e}")
-            print("Voice channel check completed.")
+                            print(f"Failed to remove role from {member.name}: {e}", flush=True)
+            print("Voice channel check completed.", flush=True)
         else:
-            print("Auto leaderboard and voice channel checks are disabled in development mode.")
+            print("Auto leaderboard and voice channel checks are disabled in development mode.", flush=True)
