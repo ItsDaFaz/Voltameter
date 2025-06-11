@@ -13,6 +13,8 @@ from cogs.db import DBManager
 
 import os
 import time
+import signal
+import sys
 
 # Database imports
 from db.init_db import init_models
@@ -34,6 +36,13 @@ intents.message_content = True
 intents.guild_messages = True
 intents.members = True
 intents.voice_states = True
+
+def handle_shutdown(signum, frame):
+    print(f"[Signal Handler] Received shutdown signal: {signum}", flush=True)
+    sys.stdout.flush()
+
+signal.signal(signal.SIGTERM, handle_shutdown)
+signal.signal(signal.SIGINT, handle_shutdown)
 
 class VoltameterClient(discord.Client):
     def __init__(self):
