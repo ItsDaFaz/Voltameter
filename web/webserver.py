@@ -5,7 +5,7 @@ import os
 from dotenv import load_dotenv
 from db.session import get_engine  # Import the engine factory
 
-load_dotenv()  # Load environment variables from .env file
+load_dotenv(override=True)  # Load environment variables from .env file
 
 class WebServer:
     def __init__(self):
