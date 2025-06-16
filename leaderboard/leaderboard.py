@@ -172,7 +172,7 @@ class LeaderboardManager:
                 and not any(role.permissions.administrator for role in member.roles)
             )
         }
-        top_ten = Counter(non_admin_messages).most_common(10)
+        top_ten = Counter(non_admin_messages).most_common(20)
 
         # Efficiently fetch DB message counts for these members (messages sent in voice)
         member_ids = [member.id for member, _ in top_ten if isinstance(member, Member)]
