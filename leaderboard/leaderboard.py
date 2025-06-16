@@ -169,7 +169,7 @@ class LeaderboardManager:
             if (
                 isinstance(member, Member)
                 and not ({role.id for role in member.roles} & set(ADMIN_ROLES_IDS))
-                and not any(role.permissions.administrator for role in member.roles)
+                
             )
         }
         top_ten = Counter(non_admin_messages).most_common(20)
