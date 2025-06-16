@@ -76,7 +76,10 @@ class LeaderboardManager:
         """
         async with self.SessionLocal() as session:
             try:
-                members = await session.scalars(select(DBMember).where(DBMember.guild_id == guild.id))
+                from sqlalchemy import literal
+                members = await session.scalars(
+                    select(DBMember).where(literal(guild.id).op('= ANY')(DBMember.guild_id))
+                )
                 db_members = members.all()
             except Exception as e:
                 print(f"Error fetching members from DB: {e}")
