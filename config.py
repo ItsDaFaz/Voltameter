@@ -47,4 +47,4 @@ CONTROLLER_URL = "http://localhost:5000/voltplay"
 #=========================
 EMBED_TITLE = "High Voltage Leaderboard"
 EMBED_COLOR = "#f6ca0e"
-EMBED_DESCRIPTION = "Recently active HLB members are ranked below, refreshed every 30 minutes. You receive a voltage boost when you text while being in a voice channel. The staff members are not ranked."
+EMBED_DESCRIPTION = "Recently active HLB members are ranked below, refreshed every 30 minutes. You receive a voltage boost when you text while being in a voice channel."
