@@ -187,17 +187,28 @@ class LeaderboardManager:
         )
         # Calculate total volt for each member and sort accordingly
         leaderboard_entries = []
+        mr_electricity_assigned = False  # Flag to ensure only one member gets the Mr. Electricity role
+
         for member, count in top_ten:
             if isinstance(member, Member):
                 text_volt = count * self.text_multiplier
                 in_voice_count = db_message_counts.get(int(member.id), 0)
                 in_voice_boost = in_voice_count * self.in_voice_boost_multiplier
                 total_volt = text_volt + in_voice_boost
+
+                # Check if member is eligible for Mr. Electricity (no admin roles)
+                has_admin_electricity = bool({role.id for role in member.roles} & set(ADMIN_ROLES_IDS_ELECTRICITY))
+                is_mr_electricity = False
+                if not mr_electricity_assigned and not has_admin_electricity:
+                    is_mr_electricity = True
+                    mr_electricity_assigned = True
+
                 leaderboard_entries.append({
                     "member": member,
                     "text_volt": text_volt,
                     "in_voice_boost": in_voice_boost,
                     "total_volt": total_volt,
+                    "is_mr_electricity": is_mr_electricity,
                 })
 
         # Sort by total_volt descending
@@ -210,7 +221,10 @@ class LeaderboardManager:
             total_volt = entry["total_volt"]
             in_voice_boost = entry["in_voice_boost"]
             memberName = escape_markdown(member.display_name)
-            embed_content += f"`{idx+1}` **{memberName}** — `{total_volt}` volt"
+            embed_content += f"`{idx+1}` **{memberName}** "
+            if entry.get("is_mr_electricity") is True:
+                embed_content += "<:hlbElectricity:1376631302681399439> "
+            embed_content += f" — `{total_volt}` volt"
             if in_voice_boost != 0:
                 embed_content += f"\t<:_:1380603159906619452> `+{in_voice_boost}`"
             embed_content += "\n"
