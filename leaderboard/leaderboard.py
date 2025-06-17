@@ -6,7 +6,7 @@ from typing import Optional, List
 import discord
 from discord.ext import tasks
 from discord import Guild, TextChannel, ForumChannel, Member, Embed, Color, Thread, Role, VoiceChannel
-from config import  DESTINATION_CHANNEL_ID as DESTINATION_CHANNEL_ID, GUILD_ID, MR_ELECTRICITY_ROLE_ID, HIGH_VOLTAGE_ROLE_ID, ADMIN_ROLES_IDS, TEXT_CHANNEL_LIST, FORUM_CHANNEL_LIST, EMBED_DESCRIPTION, EMBED_TITLE, EMBED_COLOR
+from config import  DESTINATION_CHANNEL_ID as DESTINATION_CHANNEL_ID, GUILD_ID, MR_ELECTRICITY_ROLE_ID, HIGH_VOLTAGE_ROLE_ID, ADMIN_ROLES_IDS, ADMIN_ROLES_IDS_ELECTRICITY, TEXT_CHANNEL_LIST, FORUM_CHANNEL_LIST, EMBED_DESCRIPTION, EMBED_TITLE, EMBED_COLOR
 from utils.helpers import escape_markdown, async_db_retry
 
 from db.session import get_engine, get_session_maker
@@ -265,15 +265,20 @@ class LeaderboardManager:
             
             #Role assignment logic
             mr_electricity_role: Optional[Role] = discord.utils.get(guild.roles, id=MR_ELECTRICITY_ROLE_ID)
+
             high_voltage_role: Optional[Role] = discord.utils.get(guild.roles, id=HIGH_VOLTAGE_ROLE_ID)
+            
             if not high_voltage_role or not mr_electricity_role:
                 print("Required roles not found")
                 return
+           
+            # High Voltage role management
             try:
                 for member in high_voltage_role.members:
                     if member.id not in top_ten_list:
                         try:
                             await member.remove_roles(high_voltage_role)
+                            print(f"Removed High Voltage from {member.name}", flush=True)
                         except Exception as e:
                             print(f"Error removing High Voltage from {member.name}: {e}")
                 for member_id in top_ten_list:
@@ -281,20 +286,24 @@ class LeaderboardManager:
                         member = await guild.fetch_member(member_id)
                         if member:
                             await member.add_roles(high_voltage_role)
+                            print(f"Awarded High Voltage to {member.name}", flush=True)
                     except Exception as e:
                         print(f"Error adding High Voltage to member {member_id}: {e}")
+                # Get the current top member who does not have admin roles (electricity roles)
                 current_top_member = None
                 for member_id in top_ten_list:
                     try:
                         member = await guild.fetch_member(member_id)
                         if not member:
                             continue
-                        has_admin = bool({role.id for role in member.roles} & set(ADMIN_ROLES_IDS))
+                        has_admin = bool({role.id for role in member.roles} & set(ADMIN_ROLES_IDS_ELECTRICITY))
                         if not has_admin:
                             current_top_member = member
                             break
                     except Exception as e:
                         print(f"Error fetching member {member_id}: {e}")
+                
+                # Remove Mr. Electricity role from existing top member if they are not the current top member
                 for member in mr_electricity_role.members:
                     if current_top_member and member.id == current_top_member.id:
                         continue
@@ -306,7 +315,7 @@ class LeaderboardManager:
                 if current_top_member:
                     try:
                         await current_top_member.add_roles(mr_electricity_role)
-                        print(f"Awarded Mr. Electricity to {current_top_member.name}")
+                        print(f"Awarded Mr. Electricity to {current_top_member.name}", flush=True)
                     except Exception as e:
                         print(f"Error adding Mr. Electricity to {current_top_member.name}: {e}", flush=True)
             except Exception as e:
