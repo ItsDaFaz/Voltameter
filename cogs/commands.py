@@ -26,7 +26,7 @@ class CommandCog:
                 )
         @self.client.tree.command(name="voltwinners", description="Check the current winners of the High Voltage Leaderboard")
         async def voltwinners(interaction: Interaction):
-            embed =  self.leaderboard_manager.cached_winner_embed()
+            embed =  self.leaderboard_manager.cached_winners_embed()
             if embed:
                 await interaction.response.send_message(embed=embed)
             else:
