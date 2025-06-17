@@ -1,6 +1,6 @@
 import asyncio
 import discord
-from web.webserver import app as fastapi_app
+from web.webserver import app as fastapi_app  # Ensure 'app' is the FastAPI instance, not the module
 import uvicorn
 from dotenv import load_dotenv
 from leaderboard.leaderboard import LeaderboardManager
@@ -40,6 +40,10 @@ intents.voice_states = True
 def handle_shutdown(signum, frame):
     print(f"[Signal Handler] Received shutdown signal: {signum}", flush=True)
     sys.stdout.flush()
+    sys.stderr.flush()
+    print("[Signal Handler] Shutting down gracefully...", flush=True)
+    asyncio.run(client.close())
+    print("[Signal Handler] Shutdown complete.", flush=True)
 
 signal.signal(signal.SIGTERM, handle_shutdown)
 signal.signal(signal.SIGINT, handle_shutdown)
@@ -73,19 +77,22 @@ async def on_ready():
     except Exception as e:
         print(f"Exception in on_ready: {e}", flush=True)
         # print(traceback.format_exc(), flush=True)
-    
+    if hasattr(leaderboard_manager, "auto_leaderboard") and not leaderboard_manager.auto_leaderboard.is_running():
+        leaderboard_manager.auto_leaderboard.start()
+        print("Auto leaderboard started")
+    if hasattr(leaderboard_manager, "update_leaderboard_days_task") and not leaderboard_manager.update_leaderboard_days_task.is_running():
+        await leaderboard_manager.update_leaderboard_days()
+        leaderboard_manager.update_leaderboard_days_task.start()
+    if hasattr(leaderboard_manager,"auto_winner") and not leaderboard_manager.auto_winner.is_running():
+        leaderboard_manager.auto_winner.start()
+        print("Auto winner task started")
     
     if IS_PROD:
         
         if hasattr(voice_cog, "check_vc_task") and not voice_cog.check_vc_task.is_running():
             voice_cog.check_vc_task.start()
             print("Voice channel check task started")
-        if hasattr(leaderboard_manager, "auto_leaderboard") and not leaderboard_manager.auto_leaderboard.is_running():
-            leaderboard_manager.auto_leaderboard.start()
-            print("Auto leaderboard started")
-        if hasattr(leaderboard_manager, "update_leaderboard_days_task") and not leaderboard_manager.update_leaderboard_days_task.is_running():
-            await leaderboard_manager.update_leaderboard_days()
-            leaderboard_manager.update_leaderboard_days_task.start()
+        
 
         if hasattr(db_manager, "cleanup_old_messages_task") and not db_manager.cleanup_old_messages.is_running():
             db_manager.cleanup_old_messages.start()
@@ -135,7 +142,9 @@ async def on_message_delete(message):
         print("Message deletion processing is disabled in development mode.")
 
 async def run_web():
-    config = uvicorn.Config(fastapi_app, host="0.0.0.0", port=8080, log_level="info")
+    # If fastapi_app is not the FastAPI instance, import it correctly
+    # from web.webserver import app as fastapi_app
+    config = uvicorn.Config(app=fastapi_app, host="0.0.0.0", port=8080, log_level="info")
     server = uvicorn.Server(config)
     await server.serve()
 
