@@ -6,12 +6,13 @@ from typing import Optional, List
 import discord
 from discord.ext import tasks
 from discord import Guild, TextChannel, ForumChannel, Member, Embed, Color, Thread, Role, VoiceChannel
-from config import  DESTINATION_CHANNEL_ID as DESTINATION_CHANNEL_ID, GUILD_ID, MR_ELECTRICITY_ROLE_ID, HIGH_VOLTAGE_ROLE_ID, ADMIN_ROLES_IDS, ADMIN_ROLES_IDS_ELECTRICITY, TEXT_CHANNEL_LIST, FORUM_CHANNEL_LIST, EMBED_DESCRIPTION, EMBED_TITLE, EMBED_COLOR
+from config import  DESTINATION_CHANNEL_ID as DESTINATION_CHANNEL_ID, ANNOUNCEMENT_CHANNEL_ID, GUILD_ID, MR_ELECTRICITY_ROLE_ID, HIGH_VOLTAGE_ROLE_ID, ADMIN_ROLES_IDS, ADMIN_ROLES_IDS_ELECTRICITY, TEXT_CHANNEL_LIST, FORUM_CHANNEL_LIST, EMBED_DESCRIPTION, EMBED_TITLE, EMBED_COLOR
 from utils.helpers import escape_markdown, async_db_retry
-
+import math
 from db.session import get_engine, get_session_maker
 from db.models import Member as DBMember, Message as DBMessage
 from sqlalchemy import select, func
+
 
 
 
@@ -26,7 +27,12 @@ class LeaderboardManager:
         self.cached_leaderboard_embed = None
         self.voltage_multiplier = 3  # Multiplier for volt calculation
         self.voice_voltage_multiplier = 5  # Multiplier for voice channel volt calculation
-
+        
+        self.leaderboard_entries = []  # List to store leaderboard entries
+        
+        # Winner settings
+        self.cached_winners_embed = None  # Cache for the winner embed
+        self.total_rewards_amount = 1000  # Total rewards amount to be distributed
         # Channel message counts
         self.channel_message_counts = {}
         self.forum_message_counts = {}
@@ -214,6 +220,8 @@ class LeaderboardManager:
         # Sort by total_volt descending
         leaderboard_entries.sort(key=lambda x: x["total_volt"], reverse=True)
 
+        self.leaderboard_entries = leaderboard_entries  # Store entries for later use
+
         embed_content = ""
         top_ten_list = []
         for idx, entry in enumerate(leaderboard_entries):
@@ -270,12 +278,16 @@ class LeaderboardManager:
                 return
             try:
                 async for message in destination_channel.history(limit=None):
-                    if message.author == bot_user:
+                    
+                    if self.is_prod and message.author == bot_user:
                         await message.delete()
             except Exception as e:
                 print(f"Error cleaning previous messages: {e}")
             self.cached_leaderboard_embed = embed
-            await destination_channel.send(embed=embed)
+            if self.is_prod:
+                await destination_channel.send(embed=embed)
+            else:
+                print("Skipping sending leaderboard embed in development mode.")
             
             #Role assignment logic
             mr_electricity_role: Optional[Role] = discord.utils.get(guild.roles, id=MR_ELECTRICITY_ROLE_ID)
@@ -285,60 +297,133 @@ class LeaderboardManager:
             if not high_voltage_role or not mr_electricity_role:
                 print("Required roles not found")
                 return
-           
+            if self.is_prod:
             # High Voltage role management
-            try:
-                for member in high_voltage_role.members:
-                    if member.id not in top_ten_list:
+                try:
+                    for member in high_voltage_role.members:
+                        if member.id not in top_ten_list:
+                            try:
+                                await member.remove_roles(high_voltage_role)
+                                print(f"Removed High Voltage from {member.display_name}", flush=True)
+                            except Exception as e:
+                                print(f"Error removing High Voltage from {member.display_name}: {e}")
+                    for member_id in top_ten_list:
                         try:
-                            await member.remove_roles(high_voltage_role)
-                            print(f"Removed High Voltage from {member.name}", flush=True)
+                            member = await guild.fetch_member(member_id)
+                            if member:
+                                await member.add_roles(high_voltage_role)
+                                print(f"Awarded High Voltage to {member.display_name}", flush=True)
                         except Exception as e:
-                            print(f"Error removing High Voltage from {member.name}: {e}")
-                for member_id in top_ten_list:
-                    try:
-                        member = await guild.fetch_member(member_id)
-                        if member:
-                            await member.add_roles(high_voltage_role)
-                            print(f"Awarded High Voltage to {member.name}", flush=True)
-                    except Exception as e:
-                        print(f"Error adding High Voltage to member {member_id}: {e}")
-                # Get the current top member who does not have admin roles (electricity roles)
-                current_top_member = None
-                for member_id in top_ten_list:
-                    try:
-                        member = await guild.fetch_member(member_id)
-                        if not member:
+                            print(f"Error adding High Voltage to member {member_id}: {e}")
+                    # Get the current top member who does not have admin roles (electricity roles)
+                    current_top_member = None
+                    for member_id in top_ten_list:
+                        try:
+                            member = await guild.fetch_member(member_id)
+                            if not member:
+                                continue
+                            has_admin = bool({role.id for role in member.roles} & set(ADMIN_ROLES_IDS_ELECTRICITY))
+                            if not has_admin:
+                                current_top_member = member
+                                break
+                        except Exception as e:
+                            print(f"Error fetching member {member_id}: {e}")
+                    
+                    # Remove Mr. Electricity role from existing top member if they are not the current top member
+                    for member in mr_electricity_role.members:
+                        if current_top_member and member.id == current_top_member.id:
                             continue
-                        has_admin = bool({role.id for role in member.roles} & set(ADMIN_ROLES_IDS_ELECTRICITY))
-                        if not has_admin:
-                            current_top_member = member
-                            break
-                    except Exception as e:
-                        print(f"Error fetching member {member_id}: {e}")
-                
-                # Remove Mr. Electricity role from existing top member if they are not the current top member
-                for member in mr_electricity_role.members:
-                    if current_top_member and member.id == current_top_member.id:
-                        continue
-                    try:
-                        await member.remove_roles(mr_electricity_role)
-                        print(f"Removed Mr. Electricity from {member.name}")
-                    except Exception as e:
-                        print(f"Error removing Mr. Electricity from {member.name}: {e}")
-                if current_top_member:
-                    try:
-                        await current_top_member.add_roles(mr_electricity_role)
-                        print(f"Awarded Mr. Electricity to {current_top_member.name}", flush=True)
-                    except Exception as e:
-                        print(f"Error adding Mr. Electricity to {current_top_member.name}: {e}", flush=True)
-            except Exception as e:
-                print(f"Unexpected error during role management: {e}", flush=True)
-            # Role management logic end
+                        try:
+                            await member.remove_roles(mr_electricity_role)
+                            print(f"Removed Mr. Electricity from {member.display_name}")
+                        except Exception as e:
+                            print(f"Error removing Mr. Electricity from {member.display_name}: {e}")
+                    if current_top_member:
+                        try:
+                            await current_top_member.add_roles(mr_electricity_role)
+                            print(f"Awarded Mr. Electricity to {current_top_member.display_name}", flush=True)
+                        except Exception as e:
+                            print(f"Error adding Mr. Electricity to {current_top_member.display_name}: {e}", flush=True)
+                except Exception as e:
+                    print(f"Unexpected error during role management: {e}", flush=True)
+                # Role management logic end
+            else:
+                print("Skipping role management in development mode.")
         except Exception as e:
             print(f"Error in auto leaderboard task: {e}, will retry in 5 minutes.",flush=True)
+    
+    
 
     @tasks.loop(hours=1)
     async def update_leaderboard_days_task(self):
         print("Updating leaderboard days...")
         await self.update_leaderboard_days()
+
+    @tasks.loop(minutes=1)
+    async def auto_winner(self):
+        """
+        This task checks every minute and runs the winner logic every Sunday at 9:30PM Bangladesh time (UTC+6).
+        """
+        # Use only the standard library: datetime, timedelta, timezone
+        now = datetime.now(timezone(timedelta(hours=6)))  # UTC+6 for Asia/Dhaka
+        #print(f"Current time in Asia/Dhaka: {now.strftime('%A, %Y-%m-%d %H:%M:%S')}", flush=True)
+        if now.weekday() == 6 and now.hour == 21 and now.minute == 00:
+            # Add your winner selection logic here
+            print("It's Sunday at 9:30 PM in Asia/Dhaka, running winner selection task...", flush=True)
+            print("Running auto winner selection task...")
+            embed= Embed(
+                title="Winners of High Voltage Rewards",
+                description="Winners of High Voltage rewards have been selected by our official bot HLB Volt based on the members' chat activities in recent days.",
+                color=Color.from_str(EMBED_COLOR)
+            )
+            entries = self.leaderboard_entries
+            embed_content = ""
+            if not entries:
+                print("No leaderboard entries available for winner selection.")
+                return
+            else:
+                # Winner selection logic
+                # Get total sum of total_volt for all members in self.leaderboard_entries
+                total_volt_sum = sum(entry["total_volt"] for entry in entries)
+                print(f"Total volt sum: {total_volt_sum}", flush=True)
+                if total_volt_sum == 0:
+                    print("Total volt sum is 0, cannot select winners.")
+                    return
+                #Get top 10 members
+                top_members = entries[:10] if len(entries) >= 10 else entries
+                for idx, entry in enumerate(top_members):
+                    member = entry["member"]
+                    total_volt = entry["total_volt"]
+                    member_points_percent = (total_volt / total_volt_sum) * 100 
+                    points = math.floor((member_points_percent / 100) * self.total_rewards_amount) 
+                    print(f"{member.display_name} has {total_volt} total volt. Points: {points}\n", flush=True)
+                    memberName = escape_markdown(member.display_name)
+                    if points>0:
+                        embed_content += f"`{idx+1}` **{memberName}** - <:hlbPoints:1091554934002040843> `{points}`"
+                    
+                    embed_content += "\n"
+                
+            embed_content += "\nThe winners are requested to <#841942978842066994> to claim their rewards.\n\n"
+        
+            embed.set_thumbnail(url="https://res.cloudinary.com/codebound/image/upload/v1681038436/hlb-fb-profile_v2.1_cmoamk.png")
+            embed.set_image(url="https://res.cloudinary.com/codebound/image/upload/v1681039731/hlb-post_high-voltage_fhd_v2.1_paegjl.jpg")
+            embed.set_footer(text="© Codebound")
+            embed.add_field(name="", value=embed_content)
+            # Send the embed to the announcement channel
+            try:
+                announcement_channel: discord.TextChannel = await self.client.fetch_channel(ANNOUNCEMENT_CHANNEL_ID)
+                await announcement_channel.send(embed=embed, content="<@&803016602378829865>" )
+                print("Winner announcement embed sent successfully.", flush=True)
+            except discord.NotFound:
+                print(f"Channel {ANNOUNCEMENT_CHANNEL_ID} was not found")
+                return
+            except discord.Forbidden:
+                print(f"Bot does not have permission to access channel {ANNOUNCEMENT_CHANNEL_ID}")
+                return
+            except discord.HTTPException as e:
+                print(f"HTTP error while fetching channel: {e}")
+                return
+
+            self.cached_winners_embed = embed
+        else:
+            print(f"Not the right time for winner selection. Current time: {now.strftime('%A, %Y-%m-%d %H:%M:%S')}", flush=True)
