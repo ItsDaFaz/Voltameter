@@ -367,7 +367,7 @@ class LeaderboardManager:
         # Use only the standard library: datetime, timedelta, timezone
         now = datetime.now(timezone(timedelta(hours=6)))  # UTC+6 for Asia/Dhaka
         #print(f"Current time in Asia/Dhaka: {now.strftime('%A, %Y-%m-%d %H:%M:%S')}", flush=True)
-        if now.weekday() == 1 and now.hour == 21 and now.minute == 6:
+        if now.weekday() == 1 and now.hour == 21 and now.minute == 10:
             # Add your winner selection logic here
             print("It's Sunday at 9:30 PM in Asia/Dhaka, running winner selection task...", flush=True)
             print("Running auto winner selection task...")
