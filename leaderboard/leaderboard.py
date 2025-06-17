@@ -163,13 +163,15 @@ class LeaderboardManager:
 
         await self.update_forum_message_counts(guild, count_messages_per_forum_channel)
 
-        # Filter members not with admin roles
+        # Filter members not with admin roles (or include all if ADMIN_ROLES_IDS is empty)
         non_admin_messages = {
             member: count for member, count in count_messages_by_members.items()
             if (
-                isinstance(member, Member)
-                and not ({role.id for role in member.roles} & set(ADMIN_ROLES_IDS))
-                
+            isinstance(member, Member)
+            and (
+                not ADMIN_ROLES_IDS
+                or not ({role.id for role in member.roles} & set(ADMIN_ROLES_IDS))
+            )
             )
         }
         top_ten = Counter(non_admin_messages).most_common(20)
