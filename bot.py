@@ -11,6 +11,8 @@ from cogs.commands import CommandCog
 from cogs.messages import MessageCog
 from cogs.db import DBManager
 
+from config import TEXT_CHANNEL_LIST, FORUM_CHANNEL_LIST
+
 import os
 import time
 import signal
@@ -130,7 +132,18 @@ async def on_voice_state_update(member, before, after):
 @client.event
 async def on_message(message):
     if IS_PROD:
-        await message_cog.on_message(message)
+        channel = message.channel
+        # Check if message is in a monitored TextChannel
+        if isinstance(channel, discord.TextChannel) and channel.id in TEXT_CHANNEL_LIST:
+            print(f"Processing message in TextChannel {channel.name} ({channel.id})", flush=True)
+            await message_cog.on_message(message)
+        # Check if message is in a thread under a monitored ForumChannel
+        elif isinstance(channel, discord.Thread) and channel.parent and channel.parent.id in FORUM_CHANNEL_LIST:
+            print(f"Processing message in thread '{channel.name}' under ForumChannel '{channel.parent.name}' ({channel.parent.id})", flush=True)
+            await message_cog.on_message(message)
+        else:
+            print(f"Message in channel {getattr(channel, 'name', str(channel))} ({getattr(channel, 'id', 'unknown')}) is not in the monitored list, skipping.", flush=True)
+            return
     else:
         print("Message processing is disabled in development mode.")
 
