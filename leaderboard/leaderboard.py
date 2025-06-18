@@ -91,11 +91,14 @@ class LeaderboardManager:
             db_message_counts = {}
             if member_ids:
                 try:
+                    # Calculate the datetime threshold for filtering messages
+                    days_ago = datetime.now(tz=timezone.utc) - timedelta(days=self.leaderboard_days)
                     result = await session.execute(
                         select(DBMessage.author_id, func.count(DBMessage.id))
                         .where(
                             DBMessage.author_id.in_(member_ids),
-                            DBMessage.guild_id == guild.id
+                            DBMessage.guild_id == guild.id,
+                            DBMessage.timestamp >= days_ago
                         )
                         .group_by(DBMessage.author_id)
                     )
