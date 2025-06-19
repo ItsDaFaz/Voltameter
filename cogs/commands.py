@@ -24,6 +24,17 @@ class CommandCog:
                     "Leaderboard is not ready yet! Please try again later.",
                     ephemeral=True
                 )
+        @self.client.tree.command(name="voltwinners", description="Check the current winners of the High Voltage Leaderboard")
+        async def voltwinners(interaction: Interaction):
+            embed =  self.leaderboard_manager.cached_winners_embed()
+            if embed:
+                await interaction.response.send_message(embed=embed)
+            else:
+                await interaction.response.send_message(
+                    "No winners found yet! Please try again later.",
+                    ephemeral=True
+                )
+            
         @self.client.tree.command(name="voltstatus", description="Check the current voltage leaderboard")
         async def voltstatus(interaction: Interaction):
             if not self.leaderboard_manager.cached_leaderboard_embed:
