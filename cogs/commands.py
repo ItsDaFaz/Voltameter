@@ -35,7 +35,7 @@ class CommandCog:
                     ephemeral=True
                 )
             
-        @self.client.tree.command(name="voltstatus", description="Check the current voltage leaderboard")
+        @self.client.tree.command(name="voltstatus", description="Check the voltage generated across channels")
         async def voltstatus(interaction: Interaction):
             if not self.leaderboard_manager.cached_leaderboard_embed:
                 await interaction.response.send_message(
@@ -100,7 +100,7 @@ class CommandCog:
 
             await interaction.response.send_message(embed=embed)
             
-        @self.client.tree.command(name="voltplay", description="Summon a music bot to your current voice channel or a specified one")
+        @self.client.tree.command(name="voltify", description="Summon a music bot to your current voice channel or a specified one")
         @app_commands.describe(channel="Summon a music bot to your current voice channel or a specified one")
         async def voltjoin(interaction: Interaction, channel: Optional[discord.VoiceChannel] = None):
             if not self.is_prod:
