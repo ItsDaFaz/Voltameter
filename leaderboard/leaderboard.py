@@ -109,6 +109,10 @@ class LeaderboardManager:
 
     async def generate_leaderboard_embed(self, guild: Guild):
         days_ago = datetime.now(tz=timezone.utc) - timedelta(days=await self.get_leaderboard_days())
+        
+        # Channel Processing start
+
+        # Text Channel Processing
         channel_list = TEXT_CHANNEL_LIST
         text_channels: List[TextChannel | VoiceChannel] = [
             channel for channel in guild.channels
@@ -131,6 +135,7 @@ class LeaderboardManager:
 
         await self.update_channel_message_counts(guild, count_messages_per_channel)
 
+        # Forum Channel Processing
         forum_channel_list = FORUM_CHANNEL_LIST
         forum_channels: List[ForumChannel] = [
             channel for channel in getattr(guild, 'forums', [])
@@ -172,6 +177,10 @@ class LeaderboardManager:
 
         await self.update_forum_message_counts(guild, count_messages_per_forum_channel)
 
+
+        #Leaderboard Processing start
+
+        # Combine message counts from text channels and forum channels
         # Filter members not with admin roles (or include all if ADMIN_ROLES_IDS is empty)
         non_admin_messages = {
             member: count for member, count in count_messages_by_members.items()
@@ -224,6 +233,20 @@ class LeaderboardManager:
         leaderboard_entries.sort(key=lambda x: x["total_volt"], reverse=True)
 
         self.leaderboard_entries = leaderboard_entries  # Store entries for later use
+
+        # --- Mr. Electricity selection logic (centralized) ---
+        # Find the top non-admin (electricity) member
+        mr_electricity_index = None
+        for idx, entry in enumerate(leaderboard_entries):
+            member = entry["member"]
+            has_admin_electricity = bool({role.id for role in member.roles} & set(ADMIN_ROLES_IDS_ELECTRICITY))
+            if not has_admin_electricity:
+                mr_electricity_index = idx
+                break
+        # Mark only the correct member
+        for idx, entry in enumerate(leaderboard_entries):
+            entry["is_mr_electricity"] = (idx == mr_electricity_index)
+        # --- End Mr. Electricity selection logic ---
 
         embed_content = ""
         top_ten_list = []
