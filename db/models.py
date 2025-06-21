@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, DateTime, Boolean, ForeignKey, BigInteger,ARRAY, String
 from sqlalchemy.orm import relationship, declarative_base
-
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.mutable import MutableDict, MutableList
 Base = declarative_base()
 
 
