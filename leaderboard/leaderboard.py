@@ -237,7 +237,7 @@ class LeaderboardManager:
                 embed_content += "<:hlbElectricity:1376631302681399439> "
             embed_content += f" — `{total_volt}` volt"
             if in_voice_boost != 0:
-                embed_content += f"\t<:_:1380603159906619452> `+{in_voice_boost}`"
+                embed_content += f"\t<:hlbInVoice:1385763040238112798> `+{in_voice_boost}`"
             embed_content += "\n"
             top_ten_list.append(member.id)  # Always append, regardless of in_voice_boost
         embed_content += f"\nBased on last `{str(await self.get_leaderboard_days())}` **days** of messaging activities."
