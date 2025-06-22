@@ -198,11 +198,7 @@ class LeaderboardManager:
         member_ids = [member.id for member, _ in top_ten if isinstance(member, Member)]
         db_members, db_message_counts = await self.fetch_leaderboard_db_data(guild, member_ids)
 
-        embed = Embed(
-            title=EMBED_TITLE,
-            description=EMBED_DESCRIPTION,
-            color=Color.from_str(EMBED_COLOR),
-        )
+        
         # Calculate total volt for each member and sort accordingly
         leaderboard_entries = []
         mr_electricity_assigned = False  # Flag to ensure only one member gets the Mr. Electricity role
@@ -272,11 +268,18 @@ class LeaderboardManager:
         if not embed_content.strip():
             print("[Leaderboard] Embed content is empty after generation.", flush=True)
             return None, []
-        if len(embed_content) > 1024:
-            print(f"[Leaderboard] WARNING: Embed content exceeds 1024 characters (actual: {len(embed_content)}). Discord will reject this field.", flush=True)
-            embed_content = embed_content[:1020] + "..."
-
-        embed.add_field(name="", value=embed_content)
+        if len(embed_content) > 4096:
+            print(f"[Leaderboard] WARNING: Embed content exceeds 4096 characters (actual: {len(embed_content)}). Discord will reject this field.", flush=True)
+            embed_content = embed_content[:4092] + "..."
+        
+        # Embed creation
+        embed = Embed(
+            title=EMBED_TITLE,
+            description=EMBED_DESCRIPTION+ "\n\n" + embed_content,
+            color=Color.from_str(EMBED_COLOR),
+        )
+        
+        #embed.add_field(name="", value=embed_content)
         embed.set_image(url="https://res.cloudinary.com/codebound/image/upload/v1681039731/hlb-post_high-voltage_fhd_v2.1_paegjl.jpg")
         embed.set_thumbnail(url="https://res.cloudinary.com/codebound/image/upload/v1681116021/pfp-hlb-high-voltage_em6tpk.png")
         embed.set_footer(text="© Codebound")
