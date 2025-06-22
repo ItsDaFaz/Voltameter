@@ -408,25 +408,46 @@ class LeaderboardManager:
     @tasks.loop(minutes=1)
     async def auto_winner(self):
         """
+
         This task checks every minute and runs the winner logic every Sunday at 9:30PM Bangladesh time (UTC+6).
+
         """
+
         # Use only the standard library: datetime, timedelta, timezone
+
         now = datetime.now(timezone(timedelta(hours=6)))  # UTC+6 for Asia/Dhaka
+
         #print(f"Current time in Asia/Dhaka: {now.strftime('%A, %Y-%m-%d %H:%M:%S')}", flush=True)
+
+
         if now.weekday() == 6 and now.hour == 21 and now.minute == 30:
+
             # Add your winner selection logic here
+
             print("It's Sunday at 9:30 PM in Asia/Dhaka, running winner selection task...", flush=True)
+
             print("Running auto winner selection task...")
+
             embed= Embed(
+
                 title="Winners of High Voltage Rewards",
+
                 description="Winners of High Voltage rewards have been selected by our official bot HLB Volt based on the members' chat activities in recent days.",
+
                 color=Color.from_str(EMBED_COLOR)
+
             )
+
             entries = self.leaderboard_entries
+
             embed_content = ""
+
             if not entries:
+
                 print("No leaderboard entries available for winner selection.")
+
                 return
+
             else:
                 # Winner selection logic
                 # Get total sum of total_volt for all members in self.leaderboard_entries
@@ -437,17 +458,37 @@ class LeaderboardManager:
                     return
                 #Get top 10 members
                 top_members = entries[:10] if len(entries) >= 10 else entries
-                # Prepare embed content
-                embed_content = ""
                 for idx, entry in enumerate(top_members):
                     member = entry["member"]
                     total_volt = entry["total_volt"]
+                    member_points_percent = (total_volt / total_volt_sum) * 100 
+                    points = math.floor((member_points_percent / 100) * self.total_rewards_amount) 
+                    print(f"{member.display_name} has {total_volt} total volt. Points: {points}\n", flush=True)
                     memberName = escape_markdown(member.display_name)
-                    embed_content += f"`{idx+1}` **{memberName}** — `{total_volt}` volt\n"
-                embed.add_field(name="Weekly Winners", value=embed_content, inline=False)
+                    if points>0:
+                        embed_content += f"`{idx+1}` **{memberName}** - <:hlbPoints:1091554934002040843> `{points}`"
+                    embed_content += "\n"
+            embed_content += "\nThe winners are requested to <#841942978842066994> to claim their rewards.\n\n"
+            embed.set_thumbnail(url="https://res.cloudinary.com/codebound/image/upload/v1681038436/hlb-fb-profile_v2.1_cmoamk.png")
+            embed.set_image(url="https://res.cloudinary.com/codebound/image/upload/v1681039731/hlb-post_high-voltage_fhd_v2.1_paegjl.jpg")
+            embed.set_footer(text="© Codebound")
+            embed.add_field(name="", value=embed_content)
+            # Send the embed to the announcement channel
             try:
-                announcement_channel = await self.client.fetch_channel(ANNOUNCEMENT_CHANNEL_ID)
-                await announcement_channel.send(embed=embed)
-                print(f"Announced winners in channel {ANNOUNCEMENT_CHANNEL_ID}", flush=True)
-            except Exception as e:
-                print(f"Error announcing winners: {e}", flush=True)
+                announcement_channel: discord.TextChannel = await self.client.fetch_channel(ANNOUNCEMENT_CHANNEL_ID)
+                await announcement_channel.send(embed=embed, content="<@&803016602378829865>" )
+                print("Winner announcement embed sent successfully.", flush=True)
+            except discord.NotFound:
+                print(f"Channel {ANNOUNCEMENT_CHANNEL_ID} was not found")
+                return
+            except discord.Forbidden:
+                print(f"Bot does not have permission to access channel {ANNOUNCEMENT_CHANNEL_ID}")
+                return
+            except discord.HTTPException as e:
+                print(f"HTTP error while fetching channel: {e}")
+                return
+
+            self.cached_winners_embed = embed
+
+        else:
+            print(f"Not the right time for winner selection. Current time: {now.strftime('%A, %Y-%m-%d %H:%M:%S')}", flush=True)
