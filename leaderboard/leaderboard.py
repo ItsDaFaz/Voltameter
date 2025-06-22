@@ -201,11 +201,7 @@ class LeaderboardManager:
         member_ids = [member.id for member, _ in top_ten if isinstance(member, Member)]
         db_members, db_message_counts = await self.fetch_leaderboard_db_data(guild, member_ids)
 
-        embed = Embed(
-            title=EMBED_TITLE,
-            description=EMBED_DESCRIPTION,
-            color=Color.from_str(EMBED_COLOR),
-        )
+        
         # Calculate total volt for each member and sort accordingly
         leaderboard_entries = []
         mr_electricity_assigned = False  # Flag to ensure only one member gets the Mr. Electricity role
@@ -267,56 +263,80 @@ class LeaderboardManager:
             embed_content += "\n"
             top_ten_list.append(member.id)  # Always append, regardless of in_voice_boost
         embed_content += f"\nBased on last `{str(await self.get_leaderboard_days())}` **days** of messaging activities."
-        if not embed_content:
+
+        # Log embed content length and preview
+        print(f"[Leaderboard] Embed content length: {len(embed_content)}", flush=True)
+        print(f"[Leaderboard] Embed content preview: {embed_content[:200]}{'...' if len(embed_content) > 200 else ''}", flush=True)
+
+        if not embed_content.strip():
+            print("[Leaderboard] Embed content is empty after generation.", flush=True)
             return None, []
-        embed.add_field(name="", value=embed_content)
+        if len(embed_content) > 4096:
+            print(f"[Leaderboard] WARNING: Embed content exceeds 4096 characters (actual: {len(embed_content)}). Discord will reject this field.", flush=True)
+            embed_content = embed_content[:4092] + "..."
+        
+        # Embed creation
+        embed = Embed(
+            title=EMBED_TITLE,
+            description=EMBED_DESCRIPTION+ "\n\n" + embed_content,
+            color=Color.from_str(EMBED_COLOR),
+        )
+        
+        #embed.add_field(name="", value=embed_content)
         embed.set_image(url="https://res.cloudinary.com/codebound/image/upload/v1681039731/hlb-post_high-voltage_fhd_v2.1_paegjl.jpg")
         embed.set_thumbnail(url="https://res.cloudinary.com/codebound/image/upload/v1681116021/pfp-hlb-high-voltage_em6tpk.png")
         embed.set_footer(text="© Codebound")
+        print(f"[Leaderboard] Embed ready to send. Field value length: {len(embed_content)}", flush=True)
         return embed, top_ten_list
 
     @tasks.loop(minutes=30)
     async def auto_leaderboard(self):
         try:
             guild: Optional[Guild] = self.client.get_guild(GUILD_ID)
-            print("Beginning leaderboard update...")
+            print("[Leaderboard] Beginning leaderboard update...", flush=True)
             if not guild:
-                print(f"Could not find guild with ID {GUILD_ID}")
+                print(f"[Leaderboard] Could not find guild with ID {GUILD_ID}", flush=True)
                 return
             try:
                 destination_channel = await self.client.fetch_channel(DESTINATION_CHANNEL_ID)
             except discord.NotFound:
-                print(f"Channel {DESTINATION_CHANNEL_ID} was not found")
+                print(f"[Leaderboard] Channel {DESTINATION_CHANNEL_ID} was not found", flush=True)
                 return
             except discord.Forbidden:
-                print(f"Bot does not have permission to access channel {DESTINATION_CHANNEL_ID}")
+                print(f"[Leaderboard] Bot does not have permission to access channel {DESTINATION_CHANNEL_ID}", flush=True)
                 return
             except discord.HTTPException as e:
-                print(f"HTTP error while fetching channel: {e}")
+                print(f"[Leaderboard] HTTP error while fetching channel: {e}", flush=True)
                 return
             if not isinstance(destination_channel, (TextChannel, Thread)):
-                print(f"Channel {DESTINATION_CHANNEL_ID} is not a text channel or thread.")
+                print(f"[Leaderboard] Channel {DESTINATION_CHANNEL_ID} is not a text channel or thread.", flush=True)
                 return
             bot_user: Optional[discord.ClientUser] = self.client.user
             if not bot_user:
-                print("Bot user is not initialized")
+                print("[Leaderboard] Bot user is not initialized", flush=True)
                 return
             embed, top_ten_list = await self.generate_leaderboard_embed(guild)
             if not embed:
-                print("No valid non-admin members found for leaderboard")
+                print("[Leaderboard] No valid non-admin members found for leaderboard", flush=True)
                 return
             try:
                 async for message in destination_channel.history(limit=None):
-                    
                     if self.is_prod and message.author == bot_user:
                         await message.delete()
             except Exception as e:
-                print(f"Error cleaning previous messages: {e}")
+                print(f"[Leaderboard] Error cleaning previous messages: {e}", flush=True)
             self.cached_leaderboard_embed = embed
             if self.is_prod:
-                await destination_channel.send(embed=embed)
+                print(f"[Leaderboard] Sending embed to channel {DESTINATION_CHANNEL_ID}...", flush=True)
+                print(f"[Leaderboard] Embed dict: {embed.to_dict()}", flush=True)
+                try:
+                    await destination_channel.send(embed=embed)
+                except Exception as e:
+                    print(f"[Leaderboard] ERROR sending embed: {e}", flush=True)
+                    print(f"[Leaderboard] Embed dict: {embed.to_dict()}", flush=True)
+                    return
             else:
-                print("Skipping sending leaderboard embed in development mode.")
+                print("[Leaderboard] Skipping sending leaderboard embed in development mode.", flush=True)
             
             #Role assignment logic
             mr_electricity_role: Optional[Role] = discord.utils.get(guild.roles, id=MR_ELECTRICITY_ROLE_ID)
@@ -391,25 +411,46 @@ class LeaderboardManager:
     @tasks.loop(minutes=1)
     async def auto_winner(self):
         """
+
         This task checks every minute and runs the winner logic every Sunday at 9:30PM Bangladesh time (UTC+6).
+
         """
+
         # Use only the standard library: datetime, timedelta, timezone
+
         now = datetime.now(timezone(timedelta(hours=6)))  # UTC+6 for Asia/Dhaka
+
         #print(f"Current time in Asia/Dhaka: {now.strftime('%A, %Y-%m-%d %H:%M:%S')}", flush=True)
+
+
         if now.weekday() == 6 and now.hour == 21 and now.minute == 30:
+
             # Add your winner selection logic here
+
             print("It's Sunday at 9:30 PM in Asia/Dhaka, running winner selection task...", flush=True)
+
             print("Running auto winner selection task...")
+
             embed= Embed(
+
                 title="Winners of High Voltage Rewards",
+
                 description="Winners of High Voltage rewards have been selected by our official bot HLB Volt based on the members' chat activities in recent days.",
+
                 color=Color.from_str(EMBED_COLOR)
+
             )
+
             entries = self.leaderboard_entries
+
             embed_content = ""
+
             if not entries:
+
                 print("No leaderboard entries available for winner selection.")
+
                 return
+
             else:
                 # Winner selection logic
                 # Get total sum of total_volt for all members in self.leaderboard_entries
@@ -429,11 +470,8 @@ class LeaderboardManager:
                     memberName = escape_markdown(member.display_name)
                     if points>0:
                         embed_content += f"`{idx+1}` **{memberName}** - <:hlbPoints:1091554934002040843> `{points}`"
-                    
                     embed_content += "\n"
-                
             embed_content += "\nThe winners are requested to <#841942978842066994> to claim their rewards.\n\n"
-        
             embed.set_thumbnail(url="https://res.cloudinary.com/codebound/image/upload/v1681038436/hlb-fb-profile_v2.1_cmoamk.png")
             embed.set_image(url="https://res.cloudinary.com/codebound/image/upload/v1681039731/hlb-post_high-voltage_fhd_v2.1_paegjl.jpg")
             embed.set_footer(text="© Codebound")
@@ -454,5 +492,6 @@ class LeaderboardManager:
                 return
 
             self.cached_winners_embed = embed
+
         else:
             print(f"Not the right time for winner selection. Current time: {now.strftime('%A, %Y-%m-%d %H:%M:%S')}", flush=True)
