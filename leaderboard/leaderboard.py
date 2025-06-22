@@ -264,56 +264,73 @@ class LeaderboardManager:
             embed_content += "\n"
             top_ten_list.append(member.id)  # Always append, regardless of in_voice_boost
         embed_content += f"\nBased on last `{str(await self.get_leaderboard_days())}` **days** of messaging activities."
-        if not embed_content:
+
+        # Log embed content length and preview
+        print(f"[Leaderboard] Embed content length: {len(embed_content)}", flush=True)
+        print(f"[Leaderboard] Embed content preview: {embed_content[:200]}{'...' if len(embed_content) > 200 else ''}", flush=True)
+
+        if not embed_content.strip():
+            print("[Leaderboard] Embed content is empty after generation.", flush=True)
             return None, []
+        if len(embed_content) > 1024:
+            print(f"[Leaderboard] WARNING: Embed content exceeds 1024 characters (actual: {len(embed_content)}). Discord will reject this field.", flush=True)
+            embed_content = embed_content[:1020] + "..."
+
         embed.add_field(name="", value=embed_content)
         embed.set_image(url="https://res.cloudinary.com/codebound/image/upload/v1681039731/hlb-post_high-voltage_fhd_v2.1_paegjl.jpg")
         embed.set_thumbnail(url="https://res.cloudinary.com/codebound/image/upload/v1681116021/pfp-hlb-high-voltage_em6tpk.png")
         embed.set_footer(text="© Codebound")
+        print(f"[Leaderboard] Embed ready to send. Field value length: {len(embed_content)}", flush=True)
         return embed, top_ten_list
 
     @tasks.loop(minutes=30)
     async def auto_leaderboard(self):
         try:
             guild: Optional[Guild] = self.client.get_guild(GUILD_ID)
-            print("Beginning leaderboard update...")
+            print("[Leaderboard] Beginning leaderboard update...", flush=True)
             if not guild:
-                print(f"Could not find guild with ID {GUILD_ID}")
+                print(f"[Leaderboard] Could not find guild with ID {GUILD_ID}", flush=True)
                 return
             try:
                 destination_channel = await self.client.fetch_channel(DESTINATION_CHANNEL_ID)
             except discord.NotFound:
-                print(f"Channel {DESTINATION_CHANNEL_ID} was not found")
+                print(f"[Leaderboard] Channel {DESTINATION_CHANNEL_ID} was not found", flush=True)
                 return
             except discord.Forbidden:
-                print(f"Bot does not have permission to access channel {DESTINATION_CHANNEL_ID}")
+                print(f"[Leaderboard] Bot does not have permission to access channel {DESTINATION_CHANNEL_ID}", flush=True)
                 return
             except discord.HTTPException as e:
-                print(f"HTTP error while fetching channel: {e}")
+                print(f"[Leaderboard] HTTP error while fetching channel: {e}", flush=True)
                 return
             if not isinstance(destination_channel, (TextChannel, Thread)):
-                print(f"Channel {DESTINATION_CHANNEL_ID} is not a text channel or thread.")
+                print(f"[Leaderboard] Channel {DESTINATION_CHANNEL_ID} is not a text channel or thread.", flush=True)
                 return
             bot_user: Optional[discord.ClientUser] = self.client.user
             if not bot_user:
-                print("Bot user is not initialized")
+                print("[Leaderboard] Bot user is not initialized", flush=True)
                 return
             embed, top_ten_list = await self.generate_leaderboard_embed(guild)
             if not embed:
-                print("No valid non-admin members found for leaderboard")
+                print("[Leaderboard] No valid non-admin members found for leaderboard", flush=True)
                 return
             try:
                 async for message in destination_channel.history(limit=None):
-                    
                     if self.is_prod and message.author == bot_user:
                         await message.delete()
             except Exception as e:
-                print(f"Error cleaning previous messages: {e}")
+                print(f"[Leaderboard] Error cleaning previous messages: {e}", flush=True)
             self.cached_leaderboard_embed = embed
             if self.is_prod:
-                await destination_channel.send(embed=embed)
+                print(f"[Leaderboard] Sending embed to channel {DESTINATION_CHANNEL_ID}...", flush=True)
+                print(f"[Leaderboard] Embed dict: {embed.to_dict()}", flush=True)
+                try:
+                    await destination_channel.send(embed=embed)
+                except Exception as e:
+                    print(f"[Leaderboard] ERROR sending embed: {e}", flush=True)
+                    print(f"[Leaderboard] Embed dict: {embed.to_dict()}", flush=True)
+                    return
             else:
-                print("Skipping sending leaderboard embed in development mode.")
+                print("[Leaderboard] Skipping sending leaderboard embed in development mode.", flush=True)
             
             #Role assignment logic
             mr_electricity_role: Optional[Role] = discord.utils.get(guild.roles, id=MR_ELECTRICITY_ROLE_ID)
@@ -417,39 +434,17 @@ class LeaderboardManager:
                     return
                 #Get top 10 members
                 top_members = entries[:10] if len(entries) >= 10 else entries
+                # Prepare embed content
+                embed_content = ""
                 for idx, entry in enumerate(top_members):
                     member = entry["member"]
                     total_volt = entry["total_volt"]
-                    member_points_percent = (total_volt / total_volt_sum) * 100 
-                    points = math.floor((member_points_percent / 100) * self.total_rewards_amount) 
-                    print(f"{member.display_name} has {total_volt} total volt. Points: {points}\n", flush=True)
                     memberName = escape_markdown(member.display_name)
-                    if points>0:
-                        embed_content += f"`{idx+1}` **{memberName}** - <:hlbPoints:1091554934002040843> `{points}`"
-                    
-                    embed_content += "\n"
-                
-            embed_content += "\nThe winners are requested to <#841942978842066994> to claim their rewards.\n\n"
-        
-            embed.set_thumbnail(url="https://res.cloudinary.com/codebound/image/upload/v1681038436/hlb-fb-profile_v2.1_cmoamk.png")
-            embed.set_image(url="https://res.cloudinary.com/codebound/image/upload/v1681039731/hlb-post_high-voltage_fhd_v2.1_paegjl.jpg")
-            embed.set_footer(text="© Codebound")
-            embed.add_field(name="", value=embed_content)
-            # Send the embed to the announcement channel
+                    embed_content += f"`{idx+1}` **{memberName}** — `{total_volt}` volt\n"
+                embed.add_field(name="Weekly Winners", value=embed_content, inline=False)
             try:
-                announcement_channel: discord.TextChannel = await self.client.fetch_channel(ANNOUNCEMENT_CHANNEL_ID)
-                await announcement_channel.send(embed=embed, content="<@&803016602378829865>" )
-                print("Winner announcement embed sent successfully.", flush=True)
-            except discord.NotFound:
-                print(f"Channel {ANNOUNCEMENT_CHANNEL_ID} was not found")
-                return
-            except discord.Forbidden:
-                print(f"Bot does not have permission to access channel {ANNOUNCEMENT_CHANNEL_ID}")
-                return
-            except discord.HTTPException as e:
-                print(f"HTTP error while fetching channel: {e}")
-                return
-
-            self.cached_winners_embed = embed
-        else:
-            print(f"Not the right time for winner selection. Current time: {now.strftime('%A, %Y-%m-%d %H:%M:%S')}", flush=True)
+                announcement_channel = await self.client.fetch_channel(ANNOUNCEMENT_CHANNEL_ID)
+                await announcement_channel.send(embed=embed)
+                print(f"Announced winners in channel {ANNOUNCEMENT_CHANNEL_ID}", flush=True)
+            except Exception as e:
+                print(f"Error announcing winners: {e}", flush=True)
