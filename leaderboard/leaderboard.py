@@ -73,7 +73,35 @@ class LeaderboardManager:
     async def get_forum_message_counts(self, guild: Guild):
         async with self.leaderboard_lock:
             return self.forum_message_counts.get(guild.id, Counter())
-
+        
+    async def update_cached_winners_embed(self):
+        async with self.leaderboard_lock:
+            # Fetch newest message in ANNOUNCEMENT_CHANNEL_ID from bot within the last 7 days
+            try:
+                announcement_channel: TextChannel = self.client.get_channel(ANNOUNCEMENT_CHANNEL_ID)
+                if announcement_channel:
+                    # Collect messages into a list to sort by created_at
+                    messages = [
+                        message async for message in announcement_channel.history(
+                            limit=15, after=datetime.now(timezone.utc) - timedelta(days=7)
+                        )
+                        if message.author == self.client.user and message.embeds
+                        and message.embeds[0].title and "Winners of High Voltage Rewards" in message.embeds[0].title
+                    ]
+                    if messages:
+                        # Sort messages by created_at descending to get the newest
+                        newest_message = max(messages, key=lambda m: m.created_at)
+                        self.cached_winners_embed = newest_message.embeds[0]
+                        print("Updated cached winners embed (matched newest Winners of High Voltage Rewards).")
+                        return
+                    else:
+                        print("No matching winners embed found in the last 7 days.")
+                else:
+                    print(f"Announcement channel {ANNOUNCEMENT_CHANNEL_ID} not found.")
+            except Exception as e:
+                print(f"Error updating cached winners embed: {e}", flush=True)
+            
+           
     @async_db_retry()
     async def fetch_leaderboard_db_data(self, guild: Guild, member_ids: List[int]):
         """
@@ -423,11 +451,11 @@ class LeaderboardManager:
         #print(f"Current time in Asia/Dhaka: {now.strftime('%A, %Y-%m-%d %H:%M:%S')}", flush=True)
 
 
-        if now.weekday() == 0 and now.hour == 12 and now.minute == 40:
+        if now.weekday() == 6 and now.hour == 9 and now.minute == 30:
 
             # Add your winner selection logic here
 
-            print("It's Sunday at 9:30 PM in Asia/Dhaka, running winner selection task...", flush=True)
+            print("It's Sunday at 9:30 AM in Asia/Dhaka, running winner selection task...", flush=True)
 
             print("Running auto winner selection task...")
 
@@ -435,7 +463,7 @@ class LeaderboardManager:
 
                 title="Winners of High Voltage Rewards",
 
-                description="Winners of High Voltage rewards have been selected by our official bot HLB Volt based on the members' chat activities in recent days.",
+                description="Winners of High Voltage rewards have been selected by our official app **Codebound Volt** based on the members' chat activities in recent days.",
 
                 color=Color.from_str(EMBED_COLOR)
 
