@@ -26,12 +26,22 @@ class CommandCog:
                 )
         @self.client.tree.command(name="voltwinners", description="Check the current winners of the High Voltage Leaderboard")
         async def voltwinners(interaction: Interaction):
-            embed =  self.leaderboard_manager.cached_winners_embed()
-            if embed:
+            await interaction.response.defer(thinking=True)
+            try:
+                embed =  self.leaderboard_manager.cached_winners_embed
+                if embed:
+                    pass
+                else:
+                    
+                    await self.leaderboard_manager.update_cached_winners_embed()
+                    embed = self.leaderboard_manager.cached_winners_embed
+                    
                 await interaction.response.send_message(embed=embed)
-            else:
+                
+            except Exception as e:
+                print(f"⚠️ Error: {str(e)[:100]}" + ("..." if len(str(e)) > 100 else ""))
                 await interaction.response.send_message(
-                    "No winners found yet! Please try again later.",
+                    "An error occurred while fetching winners. Please try again later.",
                     ephemeral=True
                 )
             

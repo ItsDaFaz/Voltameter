@@ -73,7 +73,27 @@ class LeaderboardManager:
     async def get_forum_message_counts(self, guild: Guild):
         async with self.leaderboard_lock:
             return self.forum_message_counts.get(guild.id, Counter())
-
+        
+    async def update_cached_winners_embed(self, embed: Embed):
+        async with self.leaderboard_lock:
+            # Fetch newest message in ANNOUNCEMENT_CHANNEL_ID from bot within the last 7 days
+            announcement_channel: TextChannel = self.client.get_channel(ANNOUNCEMENT_CHANNEL_ID)
+            if announcement_channel:
+                async for message in announcement_channel.history(limit=5, after=datetime.now(timezone.utc) - timedelta(days=7)):
+                    if message.author == self.client.user and message.embeds:
+                        msg_embed = message.embeds[0]
+                        if msg_embed.title and "Winners of High Voltage Rewards" in msg_embed.title:
+                            self.cached_winners_embed = msg_embed
+                            print("Updated cached winners embed (matched Winners of High Voltage Rewards).")
+                            return
+                        else:
+                            print("No matching winners embed found in the last 7 days.")
+                    else:
+                        print("No valid embed found in the last 7 days.")
+            else:
+                print(f"Announcement channel {ANNOUNCEMENT_CHANNEL_ID} not found.")
+            
+           
     @async_db_retry()
     async def fetch_leaderboard_db_data(self, guild: Guild, member_ids: List[int]):
         """
@@ -420,11 +440,11 @@ class LeaderboardManager:
         #print(f"Current time in Asia/Dhaka: {now.strftime('%A, %Y-%m-%d %H:%M:%S')}", flush=True)
 
 
-        if now.weekday() == 0 and now.hour == 12 and now.minute == 50:
+        if now.weekday() == 6 and now.hour == 9 and now.minute == 30:
 
             # Add your winner selection logic here
 
-            print("It's Monday at 12:50 PM in Asia/Dhaka, running winner selection task...", flush=True)
+            print("It's Sunday at 9:30 AM in Asia/Dhaka, running winner selection task...", flush=True)
 
             print("Running auto winner selection task...")
 
