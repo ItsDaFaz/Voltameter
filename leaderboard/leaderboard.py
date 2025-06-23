@@ -80,17 +80,22 @@ class LeaderboardManager:
             try:
                 announcement_channel: TextChannel = self.client.get_channel(ANNOUNCEMENT_CHANNEL_ID)
                 if announcement_channel:
-                    async for message in announcement_channel.history(limit=5, after=datetime.now(timezone.utc) - timedelta(days=7)):
-                        if message.author == self.client.user and message.embeds:
-                            msg_embed = message.embeds[0]
-                            if msg_embed.title and "Winners of High Voltage Rewards" in msg_embed.title:
-                                self.cached_winners_embed = msg_embed
-                                print("Updated cached winners embed (matched Winners of High Voltage Rewards).")
-                                return
-                            else:
-                                print("No matching winners embed found in the last 7 days.")
-                        else:
-                            print("No valid embed found in the last 7 days.")
+                    # Collect messages into a list to sort by created_at
+                    messages = [
+                        message async for message in announcement_channel.history(
+                            limit=15, after=datetime.now(timezone.utc) - timedelta(days=7)
+                        )
+                        if message.author == self.client.user and message.embeds
+                        and message.embeds[0].title and "Winners of High Voltage Rewards" in message.embeds[0].title
+                    ]
+                    if messages:
+                        # Sort messages by created_at descending to get the newest
+                        newest_message = max(messages, key=lambda m: m.created_at)
+                        self.cached_winners_embed = newest_message.embeds[0]
+                        print("Updated cached winners embed (matched newest Winners of High Voltage Rewards).")
+                        return
+                    else:
+                        print("No matching winners embed found in the last 7 days.")
                 else:
                     print(f"Announcement channel {ANNOUNCEMENT_CHANNEL_ID} not found.")
             except Exception as e:
