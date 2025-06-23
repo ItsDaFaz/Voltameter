@@ -423,7 +423,7 @@ class LeaderboardManager:
         #print(f"Current time in Asia/Dhaka: {now.strftime('%A, %Y-%m-%d %H:%M:%S')}", flush=True)
 
 
-        if now.weekday() == 6 and now.hour == 21 and now.minute == 30:
+        if now.weekday() == 0 and now.hour == 12 and now.minute == 40:
 
             # Add your winner selection logic here
 
