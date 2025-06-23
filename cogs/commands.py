@@ -36,11 +36,11 @@ class CommandCog:
                     await self.leaderboard_manager.update_cached_winners_embed()
                     embed = self.leaderboard_manager.cached_winners_embed
                     
-                await interaction.response.send_message(embed=embed)
+                await interaction.followup.send(embed=embed)
                 
             except Exception as e:
                 print(f"⚠️ Error: {str(e)[:100]}" + ("..." if len(str(e)) > 100 else ""))
-                await interaction.response.send_message(
+                await interaction.followup.send(
                     "An error occurred while fetching winners. Please try again later.",
                     ephemeral=True
                 )
