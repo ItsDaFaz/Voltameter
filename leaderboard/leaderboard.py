@@ -420,11 +420,11 @@ class LeaderboardManager:
         #print(f"Current time in Asia/Dhaka: {now.strftime('%A, %Y-%m-%d %H:%M:%S')}", flush=True)
 
 
-        if now.weekday() == 6 and now.hour == 21 and now.minute == 30:
+        if now.weekday() == 0 and now.hour == 12 and now.minute == 50:
 
             # Add your winner selection logic here
 
-            print("It's Sunday at 9:30 PM in Asia/Dhaka, running winner selection task...", flush=True)
+            print("It's Monday at 12:50 PM in Asia/Dhaka, running winner selection task...", flush=True)
 
             print("Running auto winner selection task...")
 
