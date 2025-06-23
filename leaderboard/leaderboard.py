@@ -460,7 +460,7 @@ class LeaderboardManager:
 
                 title="Winners of High Voltage Rewards",
 
-                description="Winners of High Voltage rewards have been selected by our official bot HLB Volt based on the members' chat activities in recent days.",
+                description="Winners of High Voltage rewards have been selected by our official app **Codebound Volt** based on the members' chat activities in recent days.",
 
                 color=Color.from_str(EMBED_COLOR)
 
