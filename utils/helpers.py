@@ -4,8 +4,21 @@ import functools
 from sqlalchemy.exc import OperationalError, InterfaceError
 import asyncpg
 
+# String utility functions
 def escape_markdown(text: str) -> str:
     return re.sub(r'([_*~`|>])', r'\\\\1', text)
+
+def bool_parse(value: str) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        value = value.lower()
+        if value in ('true', '1', 'yes'):
+            return True
+        elif value in ('false', '0', 'no'):
+            return False
+    raise ValueError(f"Cannot parse '{value}' as a boolean.")
+
 def async_db_retry(max_attempts=3, delay=2):
     def decorator(func):
         @functools.wraps(func)
@@ -25,4 +38,5 @@ def async_db_retry(max_attempts=3, delay=2):
                 raise Exception("Database operation failed after all retry attempts, but no exception was captured.")
         return wrapper
     return decorator
+
 
