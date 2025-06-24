@@ -4,7 +4,6 @@ from contextlib import asynccontextmanager
 import os
 from dotenv import load_dotenv
 from db.session import get_engine  # Import the engine factory
-from bot import leaderboard_manager  # Import the leaderboard manager instance
 import asyncio
 from utils.helpers import bool_parse
 load_dotenv(override=True)  # Load environment variables from .env file
