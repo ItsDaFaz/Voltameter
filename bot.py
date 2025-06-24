@@ -1,6 +1,6 @@
 import asyncio
 import discord
-from web.webserver import app as fastapi_app  # Ensure 'app' is the FastAPI instance, not the module
+from web.webserver import app as fastapi_app, webserver  # Ensure 'app' is the FastAPI instance, not the module
 import uvicorn
 from dotenv import load_dotenv
 from leaderboard.leaderboard import LeaderboardManager
@@ -65,6 +65,7 @@ SessionLocal = get_session_maker(engine)
 
 # Initialize managers and cogs
 leaderboard_manager = LeaderboardManager(client, IS_PROD)
+webserver.set_leaderboard_manager(leaderboard_manager)  # Set the leaderboard manager for the webserver
 voice_cog = VoiceCog(client, IS_PROD)
 command_cog = CommandCog(client, leaderboard_manager, IS_PROD)
 message_cog = MessageCog(client, IS_PROD, SessionLocal)

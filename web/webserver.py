@@ -15,7 +15,13 @@ class WebServer:
     def __init__(self):
         self.engine = get_engine()  # Create engine in this thread/event loop
         self.app = FastAPI(lifespan=self.lifespan)
+        self.leaderboard_manager = None
         self.setup_routes()
+
+    def set_leaderboard_manager(self, manager):
+        
+        self.leaderboard_manager = manager
+        print("Leaderboard manager set in webserver.")
 
     def setup_routes(self):
         @self.app.api_route('/', methods=['GET','HEAD'])
@@ -24,7 +30,8 @@ class WebServer:
 
         @self.app.post('/trigger-auto-winner')
         async def trigger_auto_winner(request: Request):
-            # Simple token-based authentication
+            if self.leaderboard_manager is None:
+                raise HTTPException(status_code=500, detail="Leaderboard manager not set")
             try:
                 auth = request.headers.get("Authorization")
                 data = await request.json()
@@ -33,7 +40,7 @@ class WebServer:
                 if auth != f"Bearer {CRON_SECRET}":
                     raise HTTPException(status_code=401, detail="Unauthorized")
                 try:
-                    await leaderboard_manager.auto_winner(test=is_test)
+                    await self.leaderboard_manager.auto_winner(test=is_test)
                     return {"status": "success", "message": "auto_winner executed"}
                 except Exception as e:
                     return {"status": "error", "message": str(e)}
