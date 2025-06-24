@@ -1,11 +1,15 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
 import uvicorn
 from contextlib import asynccontextmanager
 import os
 from dotenv import load_dotenv
 from db.session import get_engine  # Import the engine factory
+from bot import leaderboard_manager  # Import the leaderboard manager instance
+import asyncio
+from utils.helpers import bool_parse
+load_dotenv(override=True)  # Load environment variables from .env file
+CRON_SECRET = os.getenv("CRON_SECRET", "default_secret")  # Default secret if not set
 
-load_dotenv()  # Load environment variables from .env file
 
 class WebServer:
     def __init__(self):
@@ -17,6 +21,24 @@ class WebServer:
         @self.app.api_route('/', methods=['GET','HEAD'])
         def index():
             return "Bot is running!"
+
+        @self.app.post('/trigger-auto-winner')
+        async def trigger_auto_winner(request: Request):
+            # Simple token-based authentication
+            try:
+                auth = request.headers.get("Authorization")
+                data = await request.json()
+                is_test: bool = bool_parse(data.get("test", False))
+
+                if auth != f"Bearer {CRON_SECRET}":
+                    raise HTTPException(status_code=401, detail="Unauthorized")
+                try:
+                    await leaderboard_manager.auto_winner(test=is_test)
+                    return {"status": "success", "message": "auto_winner executed"}
+                except Exception as e:
+                    return {"status": "error", "message": str(e)}
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Bad request: {str(e)}")
 
     @asynccontextmanager
     async def lifespan(self, app):
