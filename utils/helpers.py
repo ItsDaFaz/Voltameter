@@ -39,4 +39,29 @@ def async_db_retry(max_attempts=3, delay=2):
         return wrapper
     return decorator
 
+def generate_default_guild_configs(guild):
+    """
+    Generate default config values for a guild using discord.py Guild object.
+    - destination_channel_id: system channel if available, else first text channel
+    - text_multiplier: 3
+    - in_voice_boost_multiplier: 5
+    - admin_role_id_list, text_channels_list, forum_channels_list: []
+    - destination_channel_id_dev: None
+    """
+    # Use system channel if available, else first text channel
+    destination_channel_id = None
+    if getattr(guild, 'system_channel', None):
+        destination_channel_id = guild.system_channel.id if guild.system_channel else None
+    if not destination_channel_id and guild.text_channels:
+        destination_channel_id = guild.text_channels[0].id
+    return {
+        "admin_role_id_list": [],
+        "text_channels_list": [],
+        "forum_channels_list": [],
+        "destination_channel_id": destination_channel_id,
+        "destination_channel_id_dev": None,
+        "text_multiplier": 3,
+        "in_voice_boost_multiplier": 5
+    }
+
 

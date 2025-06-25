@@ -23,6 +23,7 @@ from db.init_db import init_models
 from db.session import get_engine, get_session_maker
 from db.models import Guild as DBGuild
 from sqlalchemy import select
+from utils.helpers import generate_default_guild_configs
 
 load_dotenv(override=True)
 TOKEN = os.getenv("TOKEN")
@@ -77,28 +78,42 @@ async def on_ready():
     try:
         for guild in client.guilds:
             await db_manager.add_guild(guild)
+            # Auto-update configs if missing or incomplete
+            db_guild = await db_manager.get_guild(guild.id)
+            configs = db_guild.configs if db_guild and db_guild.configs else {}
+            required_keys = [
+                "destination_channel_id", "text_multiplier", "in_voice_boost_multiplier",
+                "admin_role_id_list", "text_channels_list", "forum_channels_list", "destination_channel_id_dev"
+            ]
+            needs_update = not configs or any(k not in configs or configs[k] is None for k in required_keys)
+            if needs_update:
+                default_configs = generate_default_guild_configs(guild)
+                # Only update missing keys, preserve any existing values
+                for k, v in default_configs.items():
+                    if k not in configs or configs[k] is None:
+                        configs[k] = v
+                await db_manager.set_guild_configs(guild.id, configs)
     except Exception as e:
         print(f"Exception in on_ready: {e}", flush=True)
         # print(traceback.format_exc(), flush=True)
-    if hasattr(leaderboard_manager, "auto_leaderboard") and not leaderboard_manager.auto_leaderboard.is_running():
-        leaderboard_manager.auto_leaderboard.start()
+    if hasattr(leaderboard_manager, "auto_leaderboard") and not leaderboard_manager.auto_leaderboard.is_running(): # type: ignore
+        leaderboard_manager.auto_leaderboard.start() # type: ignore
         print("Auto leaderboard started")
-    if hasattr(leaderboard_manager, "update_leaderboard_days_task") and not leaderboard_manager.update_leaderboard_days_task.is_running():
-        await leaderboard_manager.update_leaderboard_days()
-        leaderboard_manager.update_leaderboard_days_task.start()
-    if hasattr(leaderboard_manager,"auto_winner") and not leaderboard_manager.auto_winner.is_running():
-        leaderboard_manager.auto_winner.start()
+    if hasattr(leaderboard_manager, "update_leaderboard_days_task") and not leaderboard_manager.update_leaderboard_days_task.is_running(): # type: ignore
+        leaderboard_manager.update_leaderboard_days_task.start()# type: ignore
+    if hasattr(leaderboard_manager,"auto_winner") and not leaderboard_manager.auto_winner.is_running(): # type: ignore
+        leaderboard_manager.auto_winner.start() # type: ignore
         print("Auto winner task started")
     
     if IS_PROD:
         
-        if hasattr(voice_cog, "check_vc_task") and not voice_cog.check_vc_task.is_running():
-            voice_cog.check_vc_task.start()
+        if hasattr(voice_cog, "check_vc_task") and not voice_cog.check_vc_task.is_running(): # type: ignore
+            voice_cog.check_vc_task.start() # type: ignore
             print("Voice channel check task started")
         
 
-        if hasattr(db_manager, "cleanup_old_messages_task") and not db_manager.cleanup_old_messages.is_running():
-            db_manager.cleanup_old_messages.start()
+        if hasattr(db_manager, "cleanup_old_messages_task") and not db_manager.cleanup_old_messages.is_running(): # type: ignore
+            db_manager.cleanup_old_messages.start() # type: ignore
             print("Old messages cleanup task started")
         
     else:
@@ -108,6 +123,9 @@ async def on_guild_join(guild):
     async with SessionLocal() as session:
         try:
             await db_manager.add_guild(guild)
+            # Generate and set default configs for the new guild
+            default_configs = generate_default_guild_configs(guild)
+            await db_manager.set_guild_configs(guild.id, default_configs)
         except Exception as e:
             print(f"Exception in on_guild_join: {e}", flush=True)
             # print(traceback.format_exc(), flush=True)
