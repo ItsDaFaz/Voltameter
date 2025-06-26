@@ -80,12 +80,14 @@ async def on_ready():
     except Exception as e:
         print(f"Exception in on_ready: {e}", flush=True)
         # print(traceback.format_exc(), flush=True)
+    print("Attempting to start auto_leaderboard", flush=True)
     if hasattr(leaderboard_manager, "auto_leaderboard") and not leaderboard_manager.auto_leaderboard.is_running(): # type: ignore
         try:
             leaderboard_manager.auto_leaderboard.start() # type: ignore
             print("Auto leaderboard started")
         except Exception as e:
             print(f"Error starting auto leaderboard: {e}", flush=True)
+    
     if hasattr(leaderboard_manager, "update_leaderboard_days_task") and not leaderboard_manager.update_leaderboard_days_task.is_running(): # type: ignore
         try:
             leaderboard_manager.update_leaderboard_days_task.start() # type: ignore
@@ -98,6 +100,7 @@ async def on_ready():
             print("Auto winner task started")
         except Exception as e:
             print(f"Error starting auto winner task: {e}", flush=True)
+    print("Attempting to start auto_leaderboard", flush=True)
     if hasattr(voice_cog, "check_vc") and not voice_cog.check_vc.is_running(): # type: ignore
         try:
             voice_cog.check_vc.start() # type: ignore
