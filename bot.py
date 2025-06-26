@@ -72,6 +72,7 @@ message_cog = MessageCog(client, IS_PROD, SessionLocal)
 db_manager = DBManager(client, IS_PROD, SessionLocal)
 @client.event
 async def on_ready():
+    print("=== on_ready START ===", flush=True)
     print(f"Logged in as {client.user}")
     # Check if client.guilds contains guilds not registered in the database
     try:
@@ -100,7 +101,7 @@ async def on_ready():
             print("Auto winner task started")
         except Exception as e:
             print(f"Error starting auto winner task: {e}", flush=True)
-    print("Attempting to start auto_leaderboard", flush=True)
+    print("Attempting to start check_vc", flush=True)
     if hasattr(voice_cog, "check_vc") and not voice_cog.check_vc.is_running(): # type: ignore
         try:
             voice_cog.check_vc.start() # type: ignore
@@ -113,13 +114,7 @@ async def on_ready():
             print("Old messages cleanup task started")
         except Exception as e:
             print(f"Error starting old messages cleanup task: {e}", flush=True)
-        
-    if IS_PROD:
-        pass
-       
-        
-    else:
-        print("Auto leaderboard and voice channel checks are disabled in development mode.")
+    print("=== on_ready END ===", flush=True)
 @client.event
 async def on_guild_join(guild):
     async with SessionLocal() as session:
