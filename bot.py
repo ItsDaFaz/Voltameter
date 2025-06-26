@@ -10,6 +10,7 @@ from cogs.voice import VoiceCog
 from cogs.commands import CommandCog
 from cogs.messages import MessageCog
 from cogs.db import DBManager
+from cogs.settings import SettingsCog
 
 from config import TEXT_CHANNEL_LIST, FORUM_CHANNEL_LIST
 
@@ -57,6 +58,7 @@ class VoltameterClient(discord.Client):
         self.tree = discord.app_commands.CommandTree(self)
 
     async def setup_hook(self):
+        
         await self.tree.sync()
 
 client = VoltameterClient()
@@ -71,6 +73,9 @@ voice_cog = VoiceCog(client, IS_PROD)
 command_cog = CommandCog(client, leaderboard_manager, IS_PROD)
 message_cog = MessageCog(client, IS_PROD, SessionLocal)
 db_manager = DBManager(client, IS_PROD, SessionLocal)
+settings_cog = SettingsCog(client, db_manager)
+
+# Discord events handling
 @client.event
 async def on_ready():
     print(f"Logged in as {client.user}")
@@ -172,6 +177,8 @@ async def on_message_delete(message):
         await message_cog.on_message_delete(message)
     else:
         print("Message deletion processing is disabled in development mode.")
+
+# Running the web server and bot concurrently
 
 async def run_web():
     # If fastapi_app is not the FastAPI instance, import it correctly
