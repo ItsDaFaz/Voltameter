@@ -80,26 +80,24 @@ async def on_ready():
     except Exception as e:
         print(f"Exception in on_ready: {e}", flush=True)
         # print(traceback.format_exc(), flush=True)
-    if hasattr(leaderboard_manager, "auto_leaderboard") and not leaderboard_manager.auto_leaderboard.is_running():
-        leaderboard_manager.auto_leaderboard.start()
+    if hasattr(leaderboard_manager, "auto_leaderboard") and not leaderboard_manager.auto_leaderboard.is_running(): # type: ignore
+        leaderboard_manager.auto_leaderboard.start() # type: ignore
         print("Auto leaderboard started")
-    if hasattr(leaderboard_manager, "update_leaderboard_days_task") and not leaderboard_manager.update_leaderboard_days_task.is_running():
-        await leaderboard_manager.update_leaderboard_days()
-        leaderboard_manager.update_leaderboard_days_task.start()
-    if hasattr(leaderboard_manager,"auto_winner") and not leaderboard_manager.auto_winner.is_running():
-        leaderboard_manager.auto_winner.start()
+    if hasattr(leaderboard_manager, "update_leaderboard_days_task") and not leaderboard_manager.update_leaderboard_days_task.is_running(): # type: ignore
+        leaderboard_manager.update_leaderboard_days_task.start() # type: ignore
+    if hasattr(leaderboard_manager,"auto_winner") and not leaderboard_manager.auto_winner.is_running(): # type: ignore
+        leaderboard_manager.auto_winner.start() # type: ignore
         print("Auto winner task started")
+    if hasattr(voice_cog, "check_vc_task") and not voice_cog.check_vc_task.is_running(): # type: ignore
+        voice_cog.check_vc_task.start() # type: ignore
+        print("Voice channel check task started")
+    if hasattr(db_manager, "cleanup_old_messages_task") and not db_manager.cleanup_old_messages.is_running(): # type: ignore
+        db_manager.cleanup_old_messages.start() # type: ignore
+        print("Old messages cleanup task started")
     
     if IS_PROD:
-        
-        if hasattr(voice_cog, "check_vc_task") and not voice_cog.check_vc_task.is_running():
-            voice_cog.check_vc_task.start()
-            print("Voice channel check task started")
-        
-
-        if hasattr(db_manager, "cleanup_old_messages_task") and not db_manager.cleanup_old_messages.is_running():
-            db_manager.cleanup_old_messages.start()
-            print("Old messages cleanup task started")
+        pass
+       
         
     else:
         print("Auto leaderboard and voice channel checks are disabled in development mode.")
