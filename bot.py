@@ -81,20 +81,36 @@ async def on_ready():
         print(f"Exception in on_ready: {e}", flush=True)
         # print(traceback.format_exc(), flush=True)
     if hasattr(leaderboard_manager, "auto_leaderboard") and not leaderboard_manager.auto_leaderboard.is_running(): # type: ignore
-        leaderboard_manager.auto_leaderboard.start() # type: ignore
-        print("Auto leaderboard started")
+        try:
+            leaderboard_manager.auto_leaderboard.start() # type: ignore
+            print("Auto leaderboard started")
+        except Exception as e:
+            print(f"Error starting auto leaderboard: {e}", flush=True)
     if hasattr(leaderboard_manager, "update_leaderboard_days_task") and not leaderboard_manager.update_leaderboard_days_task.is_running(): # type: ignore
-        leaderboard_manager.update_leaderboard_days_task.start() # type: ignore
+        try:
+            leaderboard_manager.update_leaderboard_days_task.start() # type: ignore
+            print("Update leaderboard days task started")
+        except Exception as e:
+            print(f"Error starting update leaderboard days task: {e}", flush=True)
     if hasattr(leaderboard_manager,"auto_winner") and not leaderboard_manager.auto_winner.is_running(): # type: ignore
-        leaderboard_manager.auto_winner.start() # type: ignore
-        print("Auto winner task started")
+        try:
+            leaderboard_manager.auto_winner.start() # type: ignore
+            print("Auto winner task started")
+        except Exception as e:
+            print(f"Error starting auto winner task: {e}", flush=True)
     if hasattr(voice_cog, "check_vc_task") and not voice_cog.check_vc_task.is_running(): # type: ignore
-        voice_cog.check_vc_task.start() # type: ignore
-        print("Voice channel check task started")
+        try:
+            voice_cog.check_vc_task.start() # type: ignore
+            print("Voice channel check task started")
+        except Exception as e:
+            print(f"Error starting voice channel check task: {e}", flush=True)
     if hasattr(db_manager, "cleanup_old_messages_task") and not db_manager.cleanup_old_messages.is_running(): # type: ignore
-        db_manager.cleanup_old_messages.start() # type: ignore
-        print("Old messages cleanup task started")
-    
+        try:
+            db_manager.cleanup_old_messages.start() # type: ignore
+            print("Old messages cleanup task started")
+        except Exception as e:
+            print(f"Error starting old messages cleanup task: {e}", flush=True)
+        
     if IS_PROD:
         pass
        
