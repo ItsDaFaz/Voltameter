@@ -102,12 +102,14 @@ async def on_ready():
         except Exception as e:
             print(f"Error starting auto winner task: {e}", flush=True)
     print("Attempting to start check_vc", flush=True)
-    if hasattr(voice_cog, "check_vc") and not voice_cog.check_vc.is_running(): # type: ignore
-        try:
-            voice_cog.check_vc.start() # type: ignore
-            print("Voice channel check task started")
-        except Exception as e:
-            print(f"Error starting voice channel check task: {e}", flush=True)
+    try:
+        print(f"type of voice_cog.check_vc: {type(voice_cog.check_vc)}", flush=True)
+        print(f"is_running: {getattr(voice_cog.check_vc, 'is_running', lambda: 'N/A')()}", flush=True)
+        voice_cog.check_vc.start() # type: ignore
+        print("Voice channel check task started", flush=True)
+    except Exception as e:
+        print(f"Error starting voice channel check task: {e}", flush=True)
+        traceback.print_exc()
     if hasattr(db_manager, "cleanup_old_messages_task") and not db_manager.cleanup_old_messages.is_running(): # type: ignore
         try:
             db_manager.cleanup_old_messages.start() # type: ignore
