@@ -6,12 +6,9 @@ class VoiceCog:
     def __init__(self, client, is_prod):
         self.client = client
         self.is_prod = is_prod
-        self.check_vc_task = tasks.loop(minutes=1)(self.check_vc)
-        self.start_tasks()
-    def start_tasks(self):
-        if not self.check_vc_task.is_running():
-            self.check_vc_task.start()
-            print("Voice channel check task started")
+        
+
+ 
 
     async def handle_voice_state_update(self, member: discord.Member, before, after):
         if self.is_prod:
