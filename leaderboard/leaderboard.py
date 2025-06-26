@@ -367,9 +367,9 @@ class LeaderboardManager:
                 print("[Leaderboard] Skipping sending leaderboard embed in development mode.", flush=True)
             
             #Role assignment logic
-            mr_electricity_role: Optional[Role] = discord.utils.get(guild.roles, id=MR_ELECTRICITY_ROLE_ID)
+            mr_electricity_role: Role | None = discord.utils.get(guild.roles, id=MR_ELECTRICITY_ROLE_ID)
 
-            high_voltage_role: Optional[Role] = discord.utils.get(guild.roles, id=HIGH_VOLTAGE_ROLE_ID)
+            high_voltage_role: Role | None = discord.utils.get(guild.roles, id=HIGH_VOLTAGE_ROLE_ID)
             
             if not high_voltage_role or not mr_electricity_role:
                 print("Required roles not found")
