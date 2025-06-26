@@ -4,7 +4,8 @@ from db.models import Guild as DBGuild
 from utils.helpers import generate_default_guild_configs
 from typing import Any, Dict, Optional
 import asyncio
-
+from discord import app_commands
+from config import EMBED_COLOR
 class SettingsSelect(discord.ui.Select):
     def __init__(self, config: Dict[str, Any]):
         options = [
@@ -52,32 +53,34 @@ class SettingsView(discord.ui.View):
         self.add_item(SettingsSelect(config))
 
 class SettingsCog(commands.Cog):
-    def __init__(self, bot: commands.Bot, db_manager: Any):
-        self.bot = bot
+    def __init__(self, client, db_manager: Any):
+        self.client = client
         self.db_manager = db_manager
+        self.register_commands()
+        
 
-    @commands.command(name="settings")
-    @commands.has_permissions(administrator=True)
-    async def settings_command(self, ctx: commands.Context) -> None:
-        """Post the interactive settings menu."""
-        if not ctx.guild:
-            await ctx.send("This command can only be used in a server (guild) context.")
-            return
-        db_guild = await self.db_manager.get_guild(ctx.guild.id)
-        config = db_guild.configs if db_guild and db_guild.configs else generate_default_guild_configs(ctx.guild)
-        dest_channel = config.get('destination_channel_id')
-        text_mult = config.get('text_multiplier')
-        voice_mult = config.get('in_voice_boost_multiplier')
-        embed = discord.Embed(
-            title="Guild Settings",
-            description="Use the dropdown below to configure settings.\n\n"
-                        f"**Destination Channel:** <#{dest_channel if dest_channel else 'Not set'}>\n"
-                        f"**Text Multiplier:** `{text_mult if text_mult is not None else 'Not set'}`\n"
-                        f"**In-Voice Multiplier:** `{voice_mult if voice_mult is not None else 'Not set'}`\n",
-            color=discord.Color.blurple()
-        )
-        view = SettingsView(config)
-        await ctx.send(embed=embed, view=view)
+    def register_commands(self):
+        @self.client.tree.command(name="settings", description="Post the interactive settings menu.")
+        @app_commands.checks.has_permissions(administrator=True)
+        async def settings_command(self, interaction: discord.Interaction) -> None:
+            if not interaction.guild:
+                await interaction.response.send_message("This command can only be used in a server (guild) context.", ephemeral=True)
+                return
+            db_guild = await self.db_manager.get_guild(interaction.guild.id)
+            config = db_guild.configs if db_guild and db_guild.configs else generate_default_guild_configs(interaction.guild)
+            dest_channel = config.get('destination_channel_id')
+            text_mult = config.get('text_multiplier')
+            voice_mult = config.get('in_voice_boost_multiplier')
+            embed = discord.Embed(
+                title="Guild Settings",
+                description="Use the dropdown below to configure settings.\n\n"
+                            f"**Destination Channel:** <#{dest_channel if dest_channel else 'Not set'}>\n"
+                            f"**Text Multiplier:** `{text_mult if text_mult is not None else 'Not set'}`\n"
+                            f"**In-Voice Multiplier:** `{voice_mult if voice_mult is not None else 'Not set'}`\n",
+                color=discord.Color.blurple()
+            )
+            view = SettingsView(config)
+            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
 async def setup(bot: commands.Bot):
     from cogs.db import DBManager
