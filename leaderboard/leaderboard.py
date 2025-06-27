@@ -12,6 +12,7 @@ import math
 from db.session import get_engine, get_session_maker
 from db.models import Member as DBMember, Message as DBMessage
 from sqlalchemy import select, func
+from utils.cache import global_cache
 
 class LeaderboardManager(commands.Cog):
     def __init__(self, client, IS_PROD):
@@ -19,14 +20,12 @@ class LeaderboardManager(commands.Cog):
         # Leaderboard settings
         self.leaderboard_days = 5
         self.leaderboard_lock = asyncio.Lock()
-        self.cached_leaderboard_embed = None
         self.voltage_multiplier = 3  # Multiplier for volt calculation
         self.voice_voltage_multiplier = 5  # Multiplier for voice channel volt calculation
         
         self.leaderboard_entries = []  # List to store leaderboard entries
         
         # Winner settings
-        self.cached_winners_embed = None  # Cache for the winner embed
         self.total_rewards_amount = 1000  # Total rewards amount to be distributed
         # Channel message counts
         self.channel_message_counts = {}
@@ -89,7 +88,7 @@ class LeaderboardManager(commands.Cog):
                     if messages:
                         # Sort messages by created_at descending to get the newest
                         newest_message = max(messages, key=lambda m: m.created_at)
-                        self.cached_winners_embed = newest_message.embeds[0]
+                        await global_cache.set("cached_winners_embed", newest_message.embeds[0])
                         print("Updated cached winners embed (matched newest Winners of High Voltage Rewards).")
                         return
                     else:
@@ -349,7 +348,7 @@ class LeaderboardManager(commands.Cog):
                         await message.delete()
             except Exception as e:
                 print(f"[Leaderboard] Error cleaning previous messages: {e}", flush=True)
-            self.cached_leaderboard_embed = embed
+            await global_cache.set("cached_leaderboard_embed", embed)
             if self.is_prod:
                 print(f"[Leaderboard] Sending embed to channel {DESTINATION_CHANNEL_ID}...", flush=True)
                 print(f"[Leaderboard] Embed dict: {embed.to_dict()}", flush=True)
@@ -432,7 +431,7 @@ class LeaderboardManager(commands.Cog):
         print("Updating leaderboard days...")
         await self.update_leaderboard_days()
 
-    async def auto_winner(self,test: bool = False):
+    async def auto_winner(self, test: bool = False):
         """
 
         This task checks every minute and runs the winner logic every Sunday at 9:30PM Bangladesh time (UTC+6).
@@ -501,7 +500,7 @@ class LeaderboardManager(commands.Cog):
                 announcement_channel: discord.TextChannel = await self.client.fetch_channel(ANNOUNCEMENT_CHANNEL_ID)
                 
                 await announcement_channel.send(embed=embed, content="<@&803016602378829865>" )
-                self.cached_winners_embed = embed
+                await global_cache.set("cached_winners_embed", embed)
                 return
             
            

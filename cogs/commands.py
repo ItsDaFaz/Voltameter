@@ -6,18 +6,16 @@ from typing import Optional
 from config import GUILD_IDS, TEXT_CHANNEL_LIST, FORUM_CHANNEL_LIST, DESTINATION_CHANNEL_ID, DESTINATION_CHANNEL_ID_DEV, EMBED_DESCRIPTION, EMBED_TITLE, EMBED_COLOR
 from collections import Counter
 from discord.ext import commands
-
-
+from utils.cache import global_cache
 
 class CommandCog(commands.Cog):
-    def __init__(self, client, leaderboard_manager, is_prod):
+    def __init__(self, client, is_prod):
         self.client = client
-        self.leaderboard_manager = leaderboard_manager
         self.is_prod = is_prod
 
     @app_commands.command(name="voltage", description="Show current voltage leaderboard")
     async def voltage(self, interaction: Interaction):
-        embed = self.leaderboard_manager.cached_leaderboard_embed
+        embed = await global_cache.get("cached_leaderboard_embed")
         if embed:
             await interaction.response.send_message(embed=embed)
         else:
@@ -30,11 +28,14 @@ class CommandCog(commands.Cog):
     async def voltwinners(self, interaction: Interaction):
         await interaction.response.defer(thinking=True)
         try:
-            embed =  self.leaderboard_manager.cached_winners_embed
-            if not embed:
-                await self.leaderboard_manager.update_cached_winners_embed()
-                embed = self.leaderboard_manager.cached_winners_embed
-            await interaction.followup.send(embed=embed)
+            embed = await global_cache.get("cached_winners_embed")
+            if embed:
+                await interaction.followup.send(embed=embed)
+            else:
+                await interaction.followup.send(
+                    "Winners are not ready yet! Please try again later.",
+                    ephemeral=True
+                )
         except Exception as e:
             print(f"⚠️ Error: {str(e)[:100]}" + ("..." if len(str(e)) > 100 else ""))
             await interaction.followup.send(
@@ -44,7 +45,8 @@ class CommandCog(commands.Cog):
 
     @app_commands.command(name="voltstatus", description="Check the voltage generated across channels")
     async def voltstatus(self, interaction: Interaction):
-        if not self.leaderboard_manager.cached_leaderboard_embed:
+        embed = await global_cache.get("cached_leaderboard_embed")
+        if not embed:
             await interaction.response.send_message(
                 "Status is not ready yet! Please try again later.",
                 ephemeral=True
@@ -53,8 +55,13 @@ class CommandCog(commands.Cog):
         guild = interaction.guild
         text_channels = []
         forum_channels = []
-        text_channels_count: Counter = await self.leaderboard_manager.get_channel_message_counts(guild)
-        forum_channels_count: Counter = await self.leaderboard_manager.get_forum_message_counts(guild)
+        # Retrieve channel message counts and forum message counts from cache, ensure Counter fallback
+        text_channels_count = await global_cache.get(f"channel_message_counts_{guild.id}") if guild else None
+        if text_channels_count is None:
+            text_channels_count = Counter()
+        forum_channels_count = await global_cache.get(f"forum_message_counts_{guild.id}") if guild else None
+        if forum_channels_count is None:
+            forum_channels_count = Counter()
         if guild is not None:
             print(f"[IN commands.py] Message counts per text channel: {text_channels_count}")
             print(f"[IN commands.py] Message counts per forum channel: {forum_channels_count}")
@@ -79,6 +86,9 @@ class CommandCog(commands.Cog):
                 forum_channels.append(f"<#{forum_id}> — `{count*3}` volt generated")
             else:
                 forum_channels.append(f"`{forum_id}` (not found) — `{count}` volt generated")
+        leaderboard_days = await global_cache.get("leaderboard_days")
+        if leaderboard_days is None:
+            leaderboard_days = 5
         embed = discord.Embed(
             title="Volt Status",
             color=Color.from_str(EMBED_COLOR)
@@ -95,7 +105,7 @@ class CommandCog(commands.Cog):
         )
         embed.add_field(
             name='',
-            value=f"\nBased on last `{str(await self.leaderboard_manager.get_leaderboard_days())}` **days** of messaging activities."
+            value=f"\nBased on last `{str(leaderboard_days)}` **days** of messaging activities."
         )
         embed.set_footer(text="© Codebound")
         await interaction.response.send_message(embed=embed)
@@ -103,6 +113,7 @@ class CommandCog(commands.Cog):
     @app_commands.command(name="voltify", description="Summon a music bot to your current voice channel or a specified one")
     @app_commands.describe(channel="Summon a music bot to your current voice channel or a specified one")
     async def voltjoin(self, interaction: Interaction, channel: Optional[discord.VoiceChannel] = None):
+        
         if not self.is_prod:
             try:
                 member = interaction.user
@@ -149,13 +160,6 @@ class CommandCog(commands.Cog):
                 ephemeral=True
             )
 
-    async def cog_load(self):
-        self.client.tree.add_command(self.voltage)
-        self.client.tree.add_command(self.voltwinners)
-        self.client.tree.add_command(self.voltstatus)
-        self.client.tree.add_command(self.voltjoin)
-
 async def setup(client):
-    leaderboard_manager = getattr(client, 'leaderboard_manager', None)
     is_prod = getattr(client, 'is_prod', False)
-    await client.add_cog(CommandCog(client, leaderboard_manager, is_prod))
+    await client.add_cog(CommandCog(client, is_prod))
