@@ -4,7 +4,7 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 import discord
-from discord.ext import tasks
+from discord.ext import tasks, commands
 from discord import Guild, TextChannel, ForumChannel, Member, Embed, Color, Thread, Role, VoiceChannel
 from config import  DESTINATION_CHANNEL_ID as DESTINATION_CHANNEL_ID, ANNOUNCEMENT_CHANNEL_ID, GUILD_ID, MR_ELECTRICITY_ROLE_ID, HIGH_VOLTAGE_ROLE_ID, ADMIN_ROLES_IDS, ADMIN_ROLES_IDS_ELECTRICITY, TEXT_CHANNEL_LIST, FORUM_CHANNEL_LIST, EMBED_DESCRIPTION, EMBED_TITLE, EMBED_COLOR, DESTINATION_CHANNEL_ID_DEV
 from utils.helpers import escape_markdown, async_db_retry
@@ -13,12 +13,7 @@ from db.session import get_engine, get_session_maker
 from db.models import Member as DBMember, Message as DBMessage
 from sqlalchemy import select, func
 
-
-
-
-
-
-class LeaderboardManager:
+class LeaderboardManager(commands.Cog):
     def __init__(self, client, IS_PROD):
         self.client = client
         # Leaderboard settings
@@ -46,6 +41,9 @@ class LeaderboardManager:
         # Global multipliers
         self.text_multiplier = 3
         self.in_voice_boost_multiplier = 2
+
+        self.auto_leaderboard.start()
+        self.update_leaderboard_days_task.start()
 
     async def update_leaderboard_days(self):
         
@@ -516,6 +514,9 @@ class LeaderboardManager:
             print(f"HTTP error while fetching channel: {e}")
             return
 
-        
+async def setup(client):
+    IS_PROD = getattr(client, 'is_prod', False)
+    await client.add_cog(LeaderboardManager(client, IS_PROD))
 
-    
+
+

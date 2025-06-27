@@ -5,8 +5,9 @@ from config import CONTROLLER_URL
 from typing import Optional
 from config import TEXT_CHANNEL_LIST, FORUM_CHANNEL_LIST, DESTINATION_CHANNEL_ID, DESTINATION_CHANNEL_ID_DEV, EMBED_DESCRIPTION, EMBED_TITLE, EMBED_COLOR
 from collections import Counter
+from discord.ext import commands
 
-class CommandCog:
+class CommandCog(commands.Cog):
     def __init__(self, client, leaderboard_manager, is_prod):
         self.client = client
         self.leaderboard_manager = leaderboard_manager
@@ -158,3 +159,9 @@ class CommandCog:
                     "Coming soon!",
                     ephemeral=True
                 )
+
+async def setup(client):
+    # Standard extension loading: get required managers from client attributes
+    leaderboard_manager = getattr(client, 'leaderboard_manager', None)
+    is_prod = getattr(client, 'is_prod', False)
+    await client.add_cog(CommandCog(client, leaderboard_manager, is_prod))

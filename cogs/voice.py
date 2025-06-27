@@ -1,14 +1,16 @@
 import asyncio
 import discord
-from discord.ext import tasks
+from discord.ext import tasks, commands
 from config import IN_VOICE_ROLE_ID
-class VoiceCog:
+class VoiceCog(commands.Cog):
     def __init__(self, client, is_prod):
         self.client = client
         self.is_prod = is_prod
-        
+        self.check_vc.start()
 
- 
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member, before, after):
+        await self.handle_voice_state_update(member, before, after)
 
     async def handle_voice_state_update(self, member: discord.Member, before, after):
         if self.is_prod:
@@ -87,4 +89,7 @@ class VoiceCog:
                     except Exception as e:
                         print(f"Failed to remove role from {member.name}: {e}", flush=True)
         print("Voice channel check completed.", flush=True)
-    
+
+async def setup(client):
+    is_prod = getattr(client, 'is_prod', False)
+    await client.add_cog(VoiceCog(client, is_prod))
