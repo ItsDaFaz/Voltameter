@@ -3,9 +3,11 @@ import discord
 from discord import app_commands, Interaction, Color
 from config import CONTROLLER_URL
 from typing import Optional
-from config import TEXT_CHANNEL_LIST, FORUM_CHANNEL_LIST, DESTINATION_CHANNEL_ID, DESTINATION_CHANNEL_ID_DEV, EMBED_DESCRIPTION, EMBED_TITLE, EMBED_COLOR
+from config import GUILD_IDS, TEXT_CHANNEL_LIST, FORUM_CHANNEL_LIST, DESTINATION_CHANNEL_ID, DESTINATION_CHANNEL_ID_DEV, EMBED_DESCRIPTION, EMBED_TITLE, EMBED_COLOR
 from collections import Counter
 from discord.ext import commands
+
+
 
 class CommandCog(commands.Cog):
     def __init__(self, client, leaderboard_manager, is_prod):
@@ -14,6 +16,7 @@ class CommandCog(commands.Cog):
         self.is_prod = is_prod
 
     @app_commands.command(name="voltage", description="Show current voltage leaderboard")
+    @app_commands.guilds(*(discord.Object(id=guild_id) for guild_id in GUILD_IDS))
     async def voltage(self, interaction: Interaction):
         embed = self.leaderboard_manager.cached_leaderboard_embed
         if embed:
@@ -25,6 +28,7 @@ class CommandCog(commands.Cog):
             )
 
     @app_commands.command(name="voltwinners", description="Check the current winners of the High Voltage Leaderboard")
+    @app_commands.guilds(*(discord.Object(id=guild_id) for guild_id in GUILD_IDS))
     async def voltwinners(self, interaction: Interaction):
         await interaction.response.defer(thinking=True)
         try:
@@ -41,6 +45,7 @@ class CommandCog(commands.Cog):
             )
 
     @app_commands.command(name="voltstatus", description="Check the voltage generated across channels")
+    @app_commands.guilds(*(discord.Object(id=guild_id) for guild_id in GUILD_IDS))
     async def voltstatus(self, interaction: Interaction):
         if not self.leaderboard_manager.cached_leaderboard_embed:
             await interaction.response.send_message(
@@ -100,6 +105,7 @@ class CommandCog(commands.Cog):
 
     @app_commands.command(name="voltify", description="Summon a music bot to your current voice channel or a specified one")
     @app_commands.describe(channel="Summon a music bot to your current voice channel or a specified one")
+    @app_commands.guilds(*(discord.Object(id=guild_id) for guild_id in GUILD_IDS))
     async def voltjoin(self, interaction: Interaction, channel: Optional[discord.VoiceChannel] = None):
         if not self.is_prod:
             try:

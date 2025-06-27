@@ -1,3 +1,8 @@
+# List of guild IDs where you want to register the commands instantly
+GUILD_IDS = [
+    636532413744414731,  # HLB
+]
+
 
 #============
 #//Role IDs//
