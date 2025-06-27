@@ -314,6 +314,7 @@ class LeaderboardManager(commands.Cog):
 
     @tasks.loop(minutes=30)
     async def auto_leaderboard(self):
+        await self.client.wait_until_ready()
         try:
             guild: Optional[Guild] = self.client.get_guild(GUILD_ID)
             print("[Leaderboard] Beginning leaderboard update...", flush=True)

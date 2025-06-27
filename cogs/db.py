@@ -84,6 +84,7 @@ class DBManager(commands.Cog):
     @tasks.loop(hours=24)
     @async_db_retry()
     async def cleanup_old_messages(self):
+        await self.client.wait_until_ready()
         async with self.SessionLocal() as session:
             # Clear messages older than 10 days
             ten_days_ago = datetime.now(timezone.utc) - timedelta(days=10)
