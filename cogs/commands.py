@@ -16,7 +16,6 @@ class CommandCog(commands.Cog):
         self.is_prod = is_prod
 
     @app_commands.command(name="voltage", description="Show current voltage leaderboard")
-    @app_commands.guilds(*(discord.Object(id=guild_id) for guild_id in GUILD_IDS))
     async def voltage(self, interaction: Interaction):
         embed = self.leaderboard_manager.cached_leaderboard_embed
         if embed:
@@ -28,7 +27,6 @@ class CommandCog(commands.Cog):
             )
 
     @app_commands.command(name="voltwinners", description="Check the current winners of the High Voltage Leaderboard")
-    @app_commands.guilds(*(discord.Object(id=guild_id) for guild_id in GUILD_IDS))
     async def voltwinners(self, interaction: Interaction):
         await interaction.response.defer(thinking=True)
         try:
@@ -45,7 +43,6 @@ class CommandCog(commands.Cog):
             )
 
     @app_commands.command(name="voltstatus", description="Check the voltage generated across channels")
-    @app_commands.guilds(*(discord.Object(id=guild_id) for guild_id in GUILD_IDS))
     async def voltstatus(self, interaction: Interaction):
         if not self.leaderboard_manager.cached_leaderboard_embed:
             await interaction.response.send_message(
@@ -105,7 +102,6 @@ class CommandCog(commands.Cog):
 
     @app_commands.command(name="voltify", description="Summon a music bot to your current voice channel or a specified one")
     @app_commands.describe(channel="Summon a music bot to your current voice channel or a specified one")
-    @app_commands.guilds(*(discord.Object(id=guild_id) for guild_id in GUILD_IDS))
     async def voltjoin(self, interaction: Interaction, channel: Optional[discord.VoiceChannel] = None):
         if not self.is_prod:
             try:
@@ -152,6 +148,12 @@ class CommandCog(commands.Cog):
                 "Coming soon!",
                 ephemeral=True
             )
+
+    async def cog_load(self):
+        self.client.tree.add_command(self.voltage)
+        self.client.tree.add_command(self.voltwinners)
+        self.client.tree.add_command(self.voltstatus)
+        self.client.tree.add_command(self.voltjoin)
 
 async def setup(client):
     leaderboard_manager = getattr(client, 'leaderboard_manager', None)
