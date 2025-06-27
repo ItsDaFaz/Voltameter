@@ -147,13 +147,6 @@ class CommandCog(commands.Cog):
                 ephemeral=True
             )
 
-    async def cog_load(self):
-        # Register all app commands with the tree
-        self.client.tree.add_command(self.voltage)
-        self.client.tree.add_command(self.voltwinners)
-        self.client.tree.add_command(self.voltstatus)
-        self.client.tree.add_command(self.voltjoin)
-
 async def setup(client):
     leaderboard_manager = getattr(client, 'leaderboard_manager', None)
     is_prod = getattr(client, 'is_prod', False)
