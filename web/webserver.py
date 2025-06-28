@@ -55,7 +55,7 @@ class WebServer:
                     raise HTTPException(status_code=401, detail="Unauthorized")
                 else:
                     # Fetch all items from the global cache
-                    cache_json = await global_cache.get_all()
+                    cache_json = await global_cache.get_all_serialized()
                     return {"status": "success", "cache": cache_json}
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
