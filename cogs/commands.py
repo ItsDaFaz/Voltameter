@@ -15,7 +15,14 @@ class CommandCog(commands.Cog):
 
     @app_commands.command(name="voltage", description="Show current voltage leaderboard")
     async def voltage(self, interaction: Interaction):
-        embed = await global_cache.get("cached_leaderboard_embed")
+        guild= interaction.guild
+        if not guild:
+            await interaction.response.send_message(
+                "❌ This command can only be used in a server.",
+                ephemeral=True
+            )
+            return
+        embed = await global_cache.get(f"cached_leaderboard_embed_{guild.id}")
         if embed:
             await interaction.response.send_message(embed=embed)
         else:
@@ -24,28 +31,36 @@ class CommandCog(commands.Cog):
                 ephemeral=True
             )
 
-    @app_commands.command(name="voltwinners", description="Check the current winners of the High Voltage Leaderboard")
-    async def voltwinners(self, interaction: Interaction):
-        await interaction.response.defer(thinking=True)
-        try:
-            embed = await global_cache.get("cached_winners_embed")
-            if embed:
-                await interaction.followup.send(embed=embed)
-            else:
-                await interaction.followup.send(
-                    "Winners are not ready yet! Please try again later.",
-                    ephemeral=True
-                )
-        except Exception as e:
-            print(f"⚠️ Error: {str(e)[:100]}" + ("..." if len(str(e)) > 100 else ""))
-            await interaction.followup.send(
-                "An error occurred while fetching winners. Please try again later.",
-                ephemeral=True
-            )
+    #TEMPORARILY DISABLED
+    # @app_commands.command(name="voltwinners", description="Check the current winners of the High Voltage Leaderboard")
+    # async def voltwinners(self, interaction: Interaction):
+    #     await interaction.response.defer(thinking=True)
+    #     try:
+    #         embed = await global_cache.get("cached_winners_embed")
+    #         if embed:
+    #             await interaction.followup.send(embed=embed)
+    #         else:
+    #             await interaction.followup.send(
+    #                 "Winners are not ready yet! Please try again later.",
+    #                 ephemeral=True
+    #             )
+    #     except Exception as e:
+    #         print(f"⚠️ Error: {str(e)[:100]}" + ("..." if len(str(e)) > 100 else ""))
+    #         await interaction.followup.send(
+    #             "An error occurred while fetching winners. Please try again later.",
+    #             ephemeral=True
+    #         )
 
     @app_commands.command(name="voltstatus", description="Check the voltage generated across channels")
     async def voltstatus(self, interaction: Interaction):
-        embed = await global_cache.get("cached_leaderboard_embed")
+        guild = interaction.guild
+        if not guild:
+            await interaction.response.send_message(
+                "❌ This command can only be used in a server.",
+                ephemeral=True
+            )
+            return
+        embed = await global_cache.get(f"cached_leaderboard_embed_{guild.id}")
         if not embed:
             await interaction.response.send_message(
                 "Status is not ready yet! Please try again later.",
@@ -59,7 +74,7 @@ class CommandCog(commands.Cog):
         text_channels_count = await global_cache.get(f"channel_message_counts_{guild.id}") if guild else None
         if text_channels_count is None:
             text_channels_count = Counter()
-        forum_channels_count = await global_cache.get(f"forum_message_counts_{guild.id}") if guild else None
+        forum_channels_count = await global_cache.get(f"channel_forum_message_counts_{guild.id}") if guild else None
         if forum_channels_count is None:
             forum_channels_count = Counter()
         if guild is not None:
