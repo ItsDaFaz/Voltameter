@@ -4,7 +4,7 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 import discord
-from discord.ext import tasks
+from discord.ext import tasks, commands
 from discord import Guild, TextChannel, ForumChannel, Member, Embed, Color, Thread, Role, VoiceChannel
 from config import  DESTINATION_CHANNEL_ID as DESTINATION_CHANNEL_ID, ANNOUNCEMENT_CHANNEL_ID, GUILD_ID, MR_ELECTRICITY_ROLE_ID, HIGH_VOLTAGE_ROLE_ID, ADMIN_ROLES_IDS, ADMIN_ROLES_IDS_ELECTRICITY, TEXT_CHANNEL_LIST, FORUM_CHANNEL_LIST, EMBED_DESCRIPTION, EMBED_TITLE, EMBED_COLOR, DESTINATION_CHANNEL_ID_DEV
 from utils.helpers import escape_markdown, async_db_retry
@@ -12,26 +12,20 @@ import math
 from db.session import get_engine, get_session_maker
 from db.models import Member as DBMember, Message as DBMessage
 from sqlalchemy import select, func
+from utils.cache import global_cache
 
-
-
-
-
-
-class LeaderboardManager:
+class LeaderboardManager(commands.Cog):
     def __init__(self, client, IS_PROD):
         self.client = client
         # Leaderboard settings
         self.leaderboard_days = 5
         self.leaderboard_lock = asyncio.Lock()
-        self.cached_leaderboard_embed = None
         self.voltage_multiplier = 3  # Multiplier for volt calculation
         self.voice_voltage_multiplier = 5  # Multiplier for voice channel volt calculation
         
         self.leaderboard_entries = []  # List to store leaderboard entries
         
         # Winner settings
-        self.cached_winners_embed = None  # Cache for the winner embed
         self.total_rewards_amount = 1000  # Total rewards amount to be distributed
         # Channel message counts
         self.channel_message_counts = {}
@@ -47,10 +41,14 @@ class LeaderboardManager:
         self.text_multiplier = 3
         self.in_voice_boost_multiplier = 2
 
+        self.auto_leaderboard.start()
+        self.update_leaderboard_days_task.start()
+
     async def update_leaderboard_days(self):
         
         async with self.leaderboard_lock:
             self.leaderboard_days = random.randint(4, 7)
+            await global_cache.set("leaderboard_days", self.leaderboard_days)
             print(f"Updated leaderboard days to: {self.leaderboard_days}")
 
     async def get_leaderboard_days(self):
@@ -91,7 +89,7 @@ class LeaderboardManager:
                     if messages:
                         # Sort messages by created_at descending to get the newest
                         newest_message = max(messages, key=lambda m: m.created_at)
-                        self.cached_winners_embed = newest_message.embeds[0]
+                        await global_cache.set(f"cached_winners_embed{GUILD_ID}", newest_message.embeds[0])
                         print("Updated cached winners embed (matched newest Winners of High Voltage Rewards).")
                         return
                     else:
@@ -166,6 +164,8 @@ class LeaderboardManager:
 
         await self.update_channel_message_counts(guild, count_messages_per_channel)
 
+        await global_cache.set(f"channel_message_counts_{guild.id}", count_messages_per_channel)
+
         # Forum Channel Processing
         forum_channel_list = FORUM_CHANNEL_LIST
         forum_channels: List[ForumChannel] = [
@@ -207,6 +207,7 @@ class LeaderboardManager:
         print(f"Message counts per forum channel: {count_messages_per_forum_channel}")
 
         await self.update_forum_message_counts(guild, count_messages_per_forum_channel)
+        await global_cache.set(f"channel_forum_message_counts_{guild.id}", count_messages_per_forum_channel)
 
 
         #Leaderboard Processing start
@@ -319,6 +320,7 @@ class LeaderboardManager:
 
     @tasks.loop(minutes=30)
     async def auto_leaderboard(self):
+        await self.client.wait_until_ready()
         try:
             guild: Optional[Guild] = self.client.get_guild(GUILD_ID)
             print("[Leaderboard] Beginning leaderboard update...", flush=True)
@@ -353,7 +355,7 @@ class LeaderboardManager:
                         await message.delete()
             except Exception as e:
                 print(f"[Leaderboard] Error cleaning previous messages: {e}", flush=True)
-            self.cached_leaderboard_embed = embed
+            await global_cache.set(f"cached_leaderboard_embed_{guild.id}", embed)
             if self.is_prod:
                 print(f"[Leaderboard] Sending embed to channel {DESTINATION_CHANNEL_ID}...", flush=True)
                 print(f"[Leaderboard] Embed dict: {embed.to_dict()}", flush=True)
@@ -436,7 +438,7 @@ class LeaderboardManager:
         print("Updating leaderboard days...")
         await self.update_leaderboard_days()
 
-    async def auto_winner(self,test: bool = False):
+    async def auto_winner(self, test: bool = False):
         """
 
         This task checks every minute and runs the winner logic every Sunday at 9:30PM Bangladesh time (UTC+6).
@@ -505,7 +507,7 @@ class LeaderboardManager:
                 announcement_channel: discord.TextChannel = await self.client.fetch_channel(ANNOUNCEMENT_CHANNEL_ID)
                 
                 await announcement_channel.send(embed=embed, content="<@&803016602378829865>" )
-                self.cached_winners_embed = embed
+                await global_cache.set(f"cached_winners_embed{GUILD_ID}", embed)
                 return
             
            
@@ -519,6 +521,9 @@ class LeaderboardManager:
             print(f"HTTP error while fetching channel: {e}")
             return
 
-        
+async def setup(client):
+    IS_PROD = getattr(client, 'is_prod', False)
+    await client.add_cog(LeaderboardManager(client, IS_PROD))
 
-    
+
+

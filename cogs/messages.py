@@ -1,5 +1,5 @@
 import asyncio
-from discord.ext import tasks
+from discord.ext import tasks, commands
 from config import IN_VOICE_ROLE_ID
 from discord import Client, Guild, Member, Message, Role
 from db.models import Member as DBMember, Message as DBMessage, Guild as DBGuild
@@ -7,15 +7,22 @@ from sqlalchemy import select
 from datetime import datetime, timezone
 from utils.helpers import async_db_retry
 
-class MessageCog:
+class MessageCog(commands.Cog):
     def __init__(self, client, is_prod, SessionLocal):
-        
         self.client = client
         self.is_prod = is_prod
         self.SessionLocal = SessionLocal
-        
-    @async_db_retry()
+
+    @commands.Cog.listener()
     async def on_message(self, message: Message):
+        await self.handle_on_message(message)
+
+    @commands.Cog.listener()
+    async def on_message_delete(self, message: Message):
+        await self.handle_on_message_delete(message)
+
+    @async_db_retry()
+    async def handle_on_message(self, message: Message):
         if self.is_prod: 
             author = message.author
             in_voice = isinstance(author, Member) and author.get_role(IN_VOICE_ROLE_ID) is not None
@@ -83,7 +90,7 @@ class MessageCog:
             print("Message processing is disabled in development mode.")
             
     @async_db_retry()
-    async def on_message_delete(self, message: Message):
+    async def handle_on_message_delete(self, message: Message):
         if self.is_prod:
             async with self.SessionLocal() as session:
                 try:
@@ -99,3 +106,8 @@ class MessageCog:
                     await session.rollback()
         else:
             print("Message deletion processing is disabled in development mode.")
+
+async def setup(client):
+    is_prod = getattr(client, 'is_prod', False)
+    SessionLocal = getattr(client, 'SessionLocal', None)
+    await client.add_cog(MessageCog(client, is_prod, SessionLocal))
