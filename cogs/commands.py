@@ -36,7 +36,15 @@ class CommandCog(commands.Cog):
     # async def voltwinners(self, interaction: Interaction):
     #     await interaction.response.defer(thinking=True)
     #     try:
-    #         embed = await global_cache.get("cached_winners_embed")
+    #         guild = interaction.guild
+    #         if not guild:
+    #             await interaction.followup.send(
+    #                 "❌ This command can only be used in a server.",
+    #                 ephemeral=True
+    #             )
+    #             return
+    #         # Fetch the embed from cache
+    #         embed = await global_cache.get(f"cached_winners_embed{guild.id}")
     #         if embed:
     #             await interaction.followup.send(embed=embed)
     #         else:
