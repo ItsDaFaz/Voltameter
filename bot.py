@@ -60,6 +60,7 @@ class VoltameterBot(commands.Bot):
         await self.load_extension('cogs.voice')
         await self.load_extension('cogs.messages')
         await self.load_extension('cogs.db')
+        await self.load_extension('cogs.settings')
         await self.tree.sync()
 
 bot = VoltameterBot()
