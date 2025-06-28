@@ -204,7 +204,7 @@ class LeaderboardManager(commands.Cog):
         print(f"Message counts per forum channel: {count_messages_per_forum_channel}")
 
         await self.update_forum_message_counts(guild, count_messages_per_forum_channel)
-        await global_cache.set(f"channel_message_counts_{guild.id}", count_messages_per_forum_channel)
+        await global_cache.set(f"channel_forum_message_counts_{guild.id}", count_messages_per_forum_channel)
 
 
         #Leaderboard Processing start
