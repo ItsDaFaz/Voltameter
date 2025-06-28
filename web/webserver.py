@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from db.session import get_engine  # Import the engine factory
 import asyncio
 from utils.helpers import bool_parse
+from utils.cache import global_cache
 load_dotenv(override=True)  # Load environment variables from .env file
 CRON_SECRET = os.getenv("CRON_SECRET", "default_secret")  # Default secret if not set
 
@@ -45,6 +46,21 @@ class WebServer:
                     return {"status": "error", "message": str(e)}
             except Exception as e:
                 raise HTTPException(status_code=400, detail=f"Bad request: {str(e)}")
+        
+        @self.app.post('/check-global-cache')
+        async def check_global_cache(request: Request):
+            try:
+                auth = request.headers.get("Authorization")
+                if auth != f"Bearer {CRON_SECRET}":
+                    raise HTTPException(status_code=401, detail="Unauthorized")
+                else:
+                    # Fetch all items from the global cache
+                    cache_json = await global_cache.get_all()
+                    return {"status": "success", "cache": cache_json}
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
 
     @asynccontextmanager
     async def lifespan(self, app):

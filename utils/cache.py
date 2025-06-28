@@ -12,6 +12,10 @@ class GlobalCache:
     async def get(self, key, default=None):
         async with self._lock:
             return self._cache.get(key, default)
+    
+    async def get_all(self):
+        async with self._lock:
+            return self._cache.copy()
 
     async def delete(self, key):
         async with self._lock:
