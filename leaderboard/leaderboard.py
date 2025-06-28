@@ -48,6 +48,7 @@ class LeaderboardManager(commands.Cog):
         
         async with self.leaderboard_lock:
             self.leaderboard_days = random.randint(4, 7)
+            await global_cache.set("leaderboard_days", self.leaderboard_days)
             print(f"Updated leaderboard days to: {self.leaderboard_days}")
 
     async def get_leaderboard_days(self):
