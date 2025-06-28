@@ -352,7 +352,7 @@ class LeaderboardManager(commands.Cog):
                         await message.delete()
             except Exception as e:
                 print(f"[Leaderboard] Error cleaning previous messages: {e}", flush=True)
-            await global_cache.set("cached_leaderboard_embed", embed)
+            await global_cache.set(f"cached_leaderboard_embed_{guild.id}", embed)
             if self.is_prod:
                 print(f"[Leaderboard] Sending embed to channel {DESTINATION_CHANNEL_ID}...", flush=True)
                 print(f"[Leaderboard] Embed dict: {embed.to_dict()}", flush=True)
