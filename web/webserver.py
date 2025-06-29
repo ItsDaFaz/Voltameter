@@ -44,7 +44,9 @@ class WebServer:
                     await self.leaderboard_manager.auto_winner(test=is_test)
                     return {"status": "success", "message": "auto_winner executed"}
                 except Exception as e:
-                    return {"status": "error", "message": str(e)}
+                    print("Error executing auto_winner:", str(e),flush=True)
+                    return {"status": "error", "message": "failed to execute auto_winner",}
+                    
             except Exception as e:
                 raise HTTPException(status_code=400, detail=f"Bad request: {str(e)}")
         
