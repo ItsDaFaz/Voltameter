@@ -520,7 +520,12 @@ class LeaderboardManager(commands.Cog):
 
 async def setup(client):
     IS_PROD = getattr(client, 'is_prod', False)
-    await client.add_cog(LeaderboardManager(client, IS_PROD))
+    cog = LeaderboardManager(client, IS_PROD)
+    await client.add_cog(cog)
+
+     # Register the instance with the webserver
+    from web.webserver import webserver
+    webserver.set_leaderboard_manager(cog)   
 
 
 
