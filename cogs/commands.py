@@ -31,33 +31,33 @@ class CommandCog(commands.Cog):
                 ephemeral=True
             )
 
-    #TEMPORARILY DISABLED
-    # @app_commands.command(name="voltwinners", description="Check the current winners of the High Voltage Leaderboard")
-    # async def voltwinners(self, interaction: Interaction):
-    #     await interaction.response.defer(thinking=True)
-    #     try:
-    #         guild = interaction.guild
-    #         if not guild:
-    #             await interaction.followup.send(
-    #                 "❌ This command can only be used in a server.",
-    #                 ephemeral=True
-    #             )
-    #             return
-    #         # Fetch the embed from cache
-    #         embed = await global_cache.get(f"cached_winners_embed{guild.id}")
-    #         if embed:
-    #             await interaction.followup.send(embed=embed)
-    #         else:
-    #             await interaction.followup.send(
-    #                 "Winners are not ready yet! Please try again later.",
-    #                 ephemeral=True
-    #             )
-    #     except Exception as e:
-    #         print(f"⚠️ Error: {str(e)[:100]}" + ("..." if len(str(e)) > 100 else ""))
-    #         await interaction.followup.send(
-    #             "An error occurred while fetching winners. Please try again later.",
-    #             ephemeral=True
-    #         )
+ 
+    @app_commands.command(name="voltwinners", description="Check the current winners of the High Voltage Leaderboard")
+    async def voltwinners(self, interaction: Interaction):
+        await interaction.response.defer(thinking=True)
+        try:
+            guild = interaction.guild
+            if not guild:
+                await interaction.followup.send(
+                    "❌ This command can only be used in a server.",
+                    ephemeral=True
+                )
+                return
+            # Fetch the embed from cache
+            embed = await global_cache.get(f"cached_winners_embed{guild.id}")
+            if embed:
+                await interaction.followup.send(embed=embed)
+            else:
+                await interaction.followup.send(
+                    "Winners are not ready yet! Please try again later.",
+                    ephemeral=True
+                )
+        except Exception as e:
+            print(f"⚠️ Error: {str(e)[:100]}" + ("..." if len(str(e)) > 100 else ""))
+            await interaction.followup.send(
+                "An error occurred while fetching winners. Please try again later.",
+                ephemeral=True
+            )
 
     @app_commands.command(name="voltstatus", description="Check the voltage generated across channels")
     async def voltstatus(self, interaction: Interaction):
