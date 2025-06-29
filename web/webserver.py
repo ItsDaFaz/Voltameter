@@ -5,6 +5,7 @@ import os
 from dotenv import load_dotenv
 from db.session import get_engine  # Import the engine factory
 import asyncio
+from leaderboard.leaderboard import LeaderboardManager
 from utils.helpers import bool_parse
 from utils.cache import global_cache
 load_dotenv(override=True)  # Load environment variables from .env file
@@ -83,3 +84,12 @@ class WebServer:
 webserver = WebServer()
 run_web = webserver.run
 app = webserver.app
+
+async def setup(client):
+    IS_PROD = getattr(client, 'is_prod', False)
+    cog = LeaderboardManager(client, IS_PROD)
+    await client.add_cog(cog)
+
+    # Register the instance with the webserver
+    from web.webserver import webserver
+    webserver.set_leaderboard_manager(cog)
