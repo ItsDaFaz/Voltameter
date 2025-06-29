@@ -491,7 +491,7 @@ class LeaderboardManager(commands.Cog):
                 if points>0:
                     embed_content += f"`{idx+1}` **{memberName}** - <:hlbPoints:1091554934002040843> `{points}`"
                 embed_content += "\n"
-        embed_content += "\nThe winners are requested to <#841942978842066994> to claim their rewards.\n\n"
+        # embed_content += "\nThe winners are requested to <#841942978842066994> to claim their rewards.\n\n"
         embed.set_thumbnail(url="https://res.cloudinary.com/codebound/image/upload/v1681038436/hlb-fb-profile_v2.1_cmoamk.png")
         embed.set_image(url="https://res.cloudinary.com/codebound/image/upload/v1681039731/hlb-post_high-voltage_fhd_v2.1_paegjl.jpg")
         embed.set_footer(text="© Codebound")
@@ -523,7 +523,12 @@ class LeaderboardManager(commands.Cog):
 
 async def setup(client):
     IS_PROD = getattr(client, 'is_prod', False)
-    await client.add_cog(LeaderboardManager(client, IS_PROD))
+    cog = LeaderboardManager(client, IS_PROD)
+    await client.add_cog(cog)
+
+     # Register the instance with the webserver
+    from web.webserver import webserver
+    webserver.set_leaderboard_manager(cog)   
 
 
 
