@@ -10,7 +10,8 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = 'add_guild_multipliers_and_member_guildid_array'
-down_revision = 'e9a8f844d9a0'
+#down_revision = 'e9a8f844d9a0'
+down_revision = None
 branch_labels = None
 depends_on = None
 
