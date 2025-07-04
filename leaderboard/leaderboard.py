@@ -43,6 +43,7 @@ class LeaderboardManager(commands.Cog):
 
         self.auto_leaderboard.start()
         self.update_leaderboard_days_task.start()
+        self.update_cached_winners_embed.start()
 
     async def update_leaderboard_days(self):
         
@@ -71,34 +72,40 @@ class LeaderboardManager(commands.Cog):
     async def get_forum_message_counts(self, guild: Guild):
         async with self.leaderboard_lock:
             return self.forum_message_counts.get(guild.id, Counter())
-        
+    
+    @tasks.loop(hours=1)
     async def update_cached_winners_embed(self):
-        async with self.leaderboard_lock:
-            # Fetch newest message in ANNOUNCEMENT_CHANNEL_ID from bot within the last 7 days
-            try:
-                announcement_channel: TextChannel = self.client.get_channel(ANNOUNCEMENT_CHANNEL_ID)
-                if announcement_channel:
-                    # Collect messages into a list to sort by created_at
-                    messages = [
-                        message async for message in announcement_channel.history(
-                            limit=15, after=datetime.now(timezone.utc) - timedelta(days=7)
-                        )
-                        if message.author == self.client.user and message.embeds
-                        and message.embeds[0].title and "Winners of High Voltage Rewards" in message.embeds[0].title
-                    ]
-                    if messages:
-                        # Sort messages by created_at descending to get the newest
-                        newest_message = max(messages, key=lambda m: m.created_at)
-                        await global_cache.set(f"cached_winners_embed{GUILD_ID}", newest_message.embeds[0])
-                        print("Updated cached winners embed (matched newest Winners of High Voltage Rewards).")
-                        return
+        # First, check if the embed is already cached
+        cached_embed = await global_cache.get(f"cached_winners_embed{GUILD_ID}")
+        if cached_embed:
+            return
+        else:
+            async with self.leaderboard_lock:
+                # Fetch newest message in ANNOUNCEMENT_CHANNEL_ID from bot within the last 7 days
+                try:
+                    announcement_channel: TextChannel = self.client.get_channel(ANNOUNCEMENT_CHANNEL_ID)
+                    if announcement_channel:
+                        # Collect messages into a list to sort by created_at
+                        messages = [
+                            message async for message in announcement_channel.history(
+                                limit=15, after=datetime.now(timezone.utc) - timedelta(days=7)
+                            )
+                            if message.author == self.client.user and message.embeds
+                            and message.embeds[0].title and "Winners of High Voltage Rewards" in message.embeds[0].title
+                        ]
+                        if messages:
+                            # Sort messages by created_at descending to get the newest
+                            newest_message = max(messages, key=lambda m: m.created_at)
+                            await global_cache.set(f"cached_winners_embed{GUILD_ID}", newest_message.embeds[0])
+                            print("Updated cached winners embed (matched newest Winners of High Voltage Rewards).")
+                            return
+                        else:
+                            print("No matching winners embed found in the last 7 days.")
                     else:
-                        print("No matching winners embed found in the last 7 days.")
-                else:
-                    print(f"Announcement channel {ANNOUNCEMENT_CHANNEL_ID} not found.")
-            except Exception as e:
-                print(f"Error updating cached winners embed: {e}", flush=True)
-            
+                        print(f"Announcement channel {ANNOUNCEMENT_CHANNEL_ID} not found.")
+                except Exception as e:
+                    print(f"Error updating cached winners embed: {e}", flush=True)
+                
            
     @async_db_retry()
     async def fetch_leaderboard_db_data(self, guild: Guild, member_ids: List[int]):
