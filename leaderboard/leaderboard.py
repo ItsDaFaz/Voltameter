@@ -86,7 +86,11 @@ class LeaderboardManager(commands.Cog):
                 print("[UPDATE_WINNER_CACHE] Winners embed not cached. Attempting to fetch from announcement channel...", flush=True)
                 # Fetch newest message in ANNOUNCEMENT_CHANNEL_ID from bot within the last 7 days
                 try:
-                    announcement_channel: TextChannel = self.client.get_channel(ANNOUNCEMENT_CHANNEL_ID)
+                    guild = self.client.get_guild(GUILD_ID)
+                    announcement_channel: Optional[TextChannel] = None
+                    if guild:
+                        print(f"[UPDATE_WINNER_CACHE] Found guild {GUILD_ID}. Fetching announcement channel...", flush=True)
+                        announcement_channel = guild.get_channel(ANNOUNCEMENT_CHANNEL_ID)
                     if announcement_channel:
                         print(f"[UPDATE_WINNER_CACHE] Found announcement channel {ANNOUNCEMENT_CHANNEL_ID}. Fetching messages...", flush=True)
                         # Collect messages into a list to sort by created_at
