@@ -293,7 +293,7 @@ class LeaderboardManager(commands.Cog):
             memberName = escape_markdown(member.display_name)
             embed_content += f"`{idx+1}` **{memberName}** "
             if entry.get("is_mr_electricity") is True:
-                embed_content += "<:hlbElectricity:1376631302681399439> "
+                embed_content += "<:flashface:1390994542953627708> "
             embed_content += f" — `{total_volt}` volt"
             if in_voice_boost != 0:
                 embed_content += f"\t<:hlbInVoice:1385763040238112798> `+{in_voice_boost}`"
