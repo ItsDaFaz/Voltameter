@@ -49,23 +49,33 @@ class MinecraftStatusManager(commands.Cog):
 
     @tasks.loop(seconds=5)
     async def server_status_bulletin(self):
+        # HLB Minecraft Server
         # auto task to be sent to text channel every 5 seconds
         destination_channel = await self.client.fetch_channel(DESTINATION_CHANNEL_ID_DEV)
         status_data = await self.fetch_status_from_api()
         if status_data:
             embed = self.generate_status_embed(status_data)
-            try:
-                await destination_channel.send(embed=embed)
-            except discord.Forbidden:
-                print(f"Cannot send message to {destination_channel.name}, missing permissions.")
-            except discord.HTTPException as e:
-                print(f"Failed to send message: {e}")
-        server_online = True  # Simulate server status
-
-        if server_online:
-            print("Minecraft server is online.")
+            # Try to find an existing message with the same embed title
+            async for message in destination_channel.history(limit=10):
+                if message.author == self.client.user and message.embeds:
+                    if message.embeds[0].title == "HLB Minecraft Server":
+                        try:
+                            await message.edit(embed=embed)
+                        except discord.Forbidden:
+                            print(f"Cannot edit message in {destination_channel.name}, missing permissions.")
+                        except discord.HTTPException as e:
+                            print(f"Failed to edit message: {e}")
+                        break
+                else:
+                # No existing message found, send a new one
+                    try:
+                        await destination_channel.send(embed=embed)
+                    except discord.Forbidden:
+                        print(f"Cannot send message to {destination_channel.name}, missing permissions.")
+                    except discord.HTTPException as e:
+                        print(f"Failed to send message: {e}")
         else:
-            print("Minecraft server is offline.")
+            print("Failed to fetch Minecraft server status.")
 
     @app_commands.command(name='mcstatus')
     async def server_status(self, interaction: discord.Interaction):
