@@ -31,7 +31,9 @@ class MinecraftStatusManager(commands.Cog):
         try:
             server_status = "Online" if status_data.get("online", False) else "Offline"
 
-            embed = discord.Embed(title="HLB Minecraft Server", color=discord.Color.from_str("55FF55"))
+            embed = discord.Embed(
+                title="HLB Minecraft Server", 
+                color=discord.Color.from_str("#55FF55"))
             embed.description = "Here is the current server joining and status info:"
             embed.add_field(name="IP", value=status_data.get("ip", "N/A"), inline=False)
             embed.add_field(name="Port", value=status_data.get("port", "N/A"), inline=False)
