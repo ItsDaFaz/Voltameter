@@ -4,7 +4,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 import requests
 
-from config import MINECRAFT_STATUS_URL, DESTINATION_CHANNEL_ID_DEV
+from config import MINECRAFT_STATUS_URL, DESTINATION_CHANNEL_ID_DEV, EMBED_COLOR
 
 class MinecraftStatusManager(commands.Cog):
     def __init__(self, client):
@@ -34,11 +34,13 @@ class MinecraftStatusManager(commands.Cog):
             embed = discord.Embed(
                 title="HLB Minecraft Server", 
                 color=discord.Color.from_str("#55FF55"))
-            embed.description = "Here is the current server joining and status info:"
-            embed.set_thumbnail(url="https://media.discordapp.net/attachments/1116372596406096003/1391370181900763226/thumb-400-minecraft-5754.png?ex=686ba5f5&is=686a5475&hm=df616f68bb7d43f98acf2d4fe24e069720cf0ac468be14ad770d8e879425e7e7&=&format=webp&quality=lossless")
+            embed.description = "HLB Minecraft offers monthly rewards based on your ranking on the server leaderboard. To keep things fair, staff members are not eligible for this reward. Conditions might apply."
+            port= status_data.get("port", "N/A")
+            embed.set_thumbnail(url="https://media.discordapp.net/attachments/1381847390784327712/1381847390964944897/channels4_profile.jpg?ex=686b482b&is=6869f6ab&hm=e0cd5dcaba671c72c8b4907c255765653d3935b8adcc4302d9f7bcbc52d4e2c6&=&format=webp")
             embed.set_image(url="https://media.discordapp.net/attachments/1116372596406096003/1391370484397899877/mc5.jpg?ex=686ba63d&is=686a54bd&hm=fbcbe3a1f3882b9671299eb0e2cf17c80c4838623429054c7e74533173ab12c2&=&format=webp&width=1516&height=856")
-            embed.add_field(name="IP", value="HLBOfficial.aternos.me:51910", inline=False)
-            embed.add_field(name="Port", value=status_data.get("port", "N/A"), inline=False)
+            embed.add_field(name="IP", value=f"HLBOfficial.aternos.me:51910", inline=False)
+            embed.add_field(name="Port", value="51910", inline=False)
+            # embed.add_field(name="Port", value=status_data.get("port", "N/A"), inline=False)
             embed.add_field(name="Status", value=server_status, inline=False)
             embed.add_field(name="Online Players", value=status_data.get("players", {}).get("online", 0), inline=False)
             embed.add_field(name="Max Players", value=status_data.get("players", {}).get("max", 0), inline=False)
