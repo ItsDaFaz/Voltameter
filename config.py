@@ -56,6 +56,7 @@ FORUM_CHANNEL_LIST:list[int] = [1050272864483414087,1111258587977760859,13219730
 #========
 
 CONTROLLER_URL = "http://localhost:5000/voltplay"
+MINECRAFT_STATUS_URL = "https://api.mcsrvstat.us/2/HLBOfficial.aternos.me"
 
 #=========================
 #// Embed Configuration //
