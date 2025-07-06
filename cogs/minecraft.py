@@ -77,7 +77,7 @@ class MinecraftStatusManager(commands.Cog):
         else:
             print("Failed to fetch Minecraft server status.")
 
-    @app_commands.command(name='mcstatus')
+    @app_commands.command(name='mcstatus',description='Get the current status of the HLB Minecraft server')
     async def server_status(self, interaction: discord.Interaction):
         # Same as server_status_bulletin but will respond to user in the same channel
         await interaction.response.defer(thinking=True)
