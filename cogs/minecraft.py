@@ -63,7 +63,7 @@ class MinecraftStatusManager(commands.Cog):
             print(f"[MINECRAFT] Exception in generate_status_embed: {e}", flush=True)
             return None
 
-    @tasks.loop(seconds=5)
+    @tasks.loop(seconds=30)
     async def server_status_bulletin(self):
         print("[MINECRAFT] Running server_status_bulletin task...", flush=True)
         destination_channel = await self.client.fetch_channel(DESTINATION_CHANNEL_ID_DEV)
@@ -113,7 +113,7 @@ class MinecraftStatusManager(commands.Cog):
             except discord.Forbidden:
                 await interaction.followup.send("I do not have permission to send messages in this channel.")
                 print("[MINECRAFT] Missing permissions to send embed in /mcstatus.", flush=True)
-            await interaction.followup.send("The Minecraft server is currently online.")
+            
         else:
             print("[MINECRAFT] Failed to generate status embed for /mcstatus command.", flush=True)
             await interaction.followup.send("Failed to generate status embed for the Minecraft server.")
