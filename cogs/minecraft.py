@@ -51,7 +51,7 @@ class MinecraftStatusManager(commands.Cog):
             #Blank spacer
             embed.add_field(name="\u200B",
                 value="\u200B",
-                inline=True)
+                inline=False)
 
             #Port
             embed.add_field(name="Port", value="51910", inline=True)
@@ -67,6 +67,11 @@ class MinecraftStatusManager(commands.Cog):
 
             # Status
             embed.add_field(name="Status", value=server_status, inline=True)
+
+            #Blank inline spacer
+            embed.add_field(name="\u200B",
+                value="\u200B",
+                inline=True)
 
            #Blank spacer
             embed.add_field(name="\u200B",
