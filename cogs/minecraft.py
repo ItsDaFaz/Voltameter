@@ -41,24 +41,12 @@ class MinecraftStatusManager(commands.Cog):
             embed.set_thumbnail(url="https://media.discordapp.net/attachments/1381847390784327712/1381847390964944897/channels4_profile.jpg?ex=686b482b&is=6869f6ab&hm=e0cd5dcaba671c72c8b4907c255765653d3935b8adcc4302d9f7bcbc52d4e2c6&=&format=webp")
             embed.set_image(url="https://media.discordapp.net/attachments/1116372596406096003/1391370484397899877/mc5.jpg?ex=686ba63d&is=686a54bd&hm=fbcbe3a1f3882b9671299eb0e2cf17c80c4838623429054c7e74533173ab12c2&=&format=webp&width=1516&height=856")
             
-            # Blank spacer
-            embed.add_field(name="\u200B",
-                value="\u200B",
-                inline=False)
-            
-            #Blank inline spacer
-            embed.add_field(name="\u200B",
-                value="\u200B",
-                inline=True)
-            #IP
-            #Blank inline spacer
-            embed.add_field(name="\u200B",
-                value="\u200B",
-                inline=True)
             #Blank spacer
             embed.add_field(name="\u200B",
                 value="\u200B",
                 inline=False)
+            
+            #IP
             embed.add_field(name="IP", value=f"HLBOfficial.aternos.me:51910", inline=True)
 
             # Online Players
