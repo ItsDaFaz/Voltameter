@@ -49,28 +49,28 @@ class MinecraftStatusManager(commands.Cog):
             embed.add_field(name="Online Players", value=status_data.get("players", {}).get("online", 0), inline=True)
 
             #Blank spacer
-            embed.add_field(name="",
-                value="",
+            embed.add_field(name="\u200B",
+                value="\u200B",
                 inline=True)
 
             #Port
             embed.add_field(name="Port", value="51910", inline=True)
-            # embed.add_field(name="Port", value=status_data.get("port", "N/A"), inline=False)
+            # embed.add_field(name="Port", value=status_data.get("port", "N/A"), inline=True)
 
             # Max Players
             embed.add_field(name="Max Players", value=status_data.get("players", {}).get("max", 0), inline=True)
 
             #Blank spacer
-            embed.add_field(name="",
-                value="",
+            embed.add_field(name="\u200B",
+                value="\u200B",
                 inline=False)
 
             # Status
             embed.add_field(name="Status", value=server_status, inline=True)
 
            #Blank spacer
-            embed.add_field(name="",
-                value="",
+            embed.add_field(name="\u200B",
+                value="\u200B",
                 inline=False)
 
             
