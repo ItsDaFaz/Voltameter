@@ -31,20 +31,20 @@ class MinecraftStatusManager(commands.Cog):
         try:
             server_status = "Online" if status_data.get("online", False) else "Offline"
             embed_description = f"HLB Minecraft offers monthly rewards based on your ranking on the server leaderboard. To keep things fair, staff members are not eligible for this reward. Conditions might apply.\n"
-            embed_description+="\n**Server IP:** `HLBOfficial.aternos.me:51910`\n"
-            embed_description+="\n**Port:** `51910`\n"
-            embed_description += f"\n**Status:** {server_status}\n"
-            embed_description += f"\n**Online Players:** {status_data.get('players', {}).get('online', 0)}\n"
-            embed_description += f"\n**Max Players:** {status_data.get('players', {}).get('max', 0)}\n"
-            embed_player_list=""
+            embed_description+="\n**Server IP:** `HLBOfficial.aternos.me:51910`"
+            embed_description+="\n**Port:** `51910`"
+            embed_description += f"\n**Status:** `{server_status}`"
+            embed_description += f"\n**Online Players:** `{status_data.get('players', {}).get('online', 0)}`"
+            embed_description += f"\n**Max Players:** `{status_data.get('players', {}).get('max', 0)}`\n"
+            embed_player_list="\n"
             player_list = status_data.get("players", {}).get("list", [])
             if player_list:
                 for idx,player in enumerate(player_list):
-                    embed_player_list += f"{idx+1}. {player}\n"
+                    embed_player_list += f"\n`{idx+1}` {player}"
             else:
                 embed_player_list = "No players online"
             
-            embed_description+= f"\n**Players currently online:**\n{embed_player_list}\n"
+            embed_description+= f"\n**Players currently online:**{embed_player_list}\n"
             embed = discord.Embed(
                 title="HLB Minecraft Server", 
                 color=discord.Color.from_str(EMBED_COLOR),
