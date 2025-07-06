@@ -60,35 +60,32 @@ class MinecraftStatusManager(commands.Cog):
     @tasks.loop(seconds=5)
     async def server_status_bulletin(self):
         print("[MINECRAFT] Running server_status_bulletin task...", flush=True)
-        # HLB Minecraft Server
-        # auto task to be sent to text channel every 5 seconds
         destination_channel = await self.client.fetch_channel(DESTINATION_CHANNEL_ID_DEV)
         print(f"[MINECRAFT] Fetched destination channel: {destination_channel}", flush=True)
         status_data = await self.fetch_status_from_api()
         if status_data:
             print("[MINECRAFT] Status data received, updating bulletin...", flush=True)
             embed = self.generate_status_embed(status_data)
-            # Try to find an existing message with the same embed title
+            # Find and delete the previous bulletin message
             async for message in destination_channel.history(limit=10):
                 if message.author == self.client.user and message.embeds:
                     if message.embeds[0].title == "HLB Minecraft Server":
                         try:
-                            await message.edit(embed=embed)
-                            print("[MINECRAFT] Edited existing bulletin message.", flush=True)
+                            await message.delete()
+                            print("[MINECRAFT] Deleted previous bulletin message.", flush=True)
                         except discord.Forbidden:
-                            print(f"[MINECRAFT] Cannot edit message in {destination_channel.name}, missing permissions.", flush=True)
+                            print(f"[MINECRAFT] Cannot delete message in {destination_channel.name}, missing permissions.", flush=True)
                         except discord.HTTPException as e:
-                            print(f"[MINECRAFT] Failed to edit message: {e}", flush=True)
+                            print(f"[MINECRAFT] Failed to delete message: {e}", flush=True)
                         break
-                else:
-                # No existing message found, send a new one
-                    try:
-                        await destination_channel.send(embed=embed)
-                        print("[MINECRAFT] Sent new bulletin message.", flush=True)
-                    except discord.Forbidden:
-                        print(f"[MINECRAFT] Cannot send message to {destination_channel.name}, missing permissions.", flush=True)
-                    except discord.HTTPException as e:
-                        print(f"[MINECRAFT] Failed to send message: {e}", flush=True)
+            # Send a new bulletin message
+            try:
+                await destination_channel.send(embed=embed)
+                print("[MINECRAFT] Sent new bulletin message.", flush=True)
+            except discord.Forbidden:
+                print(f"[MINECRAFT] Cannot send message to {destination_channel.name}, missing permissions.", flush=True)
+            except discord.HTTPException as e:
+                print(f"[MINECRAFT] Failed to send message: {e}", flush=True)
         else:
             print("[MINECRAFT] Failed to fetch Minecraft server status.", flush=True)
 
