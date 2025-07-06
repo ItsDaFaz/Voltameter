@@ -33,18 +33,49 @@ class MinecraftStatusManager(commands.Cog):
 
             embed = discord.Embed(
                 title="HLB Minecraft Server", 
-                color=discord.Color.from_str("#55FF55"))
+                color=discord.Color.from_str(EMBED_COLOR))
+            
+            # Embed details and images
             embed.description = "HLB Minecraft offers monthly rewards based on your ranking on the server leaderboard. To keep things fair, staff members are not eligible for this reward. Conditions might apply."
-            port= status_data.get("port", "N/A")
+            
             embed.set_thumbnail(url="https://media.discordapp.net/attachments/1381847390784327712/1381847390964944897/channels4_profile.jpg?ex=686b482b&is=6869f6ab&hm=e0cd5dcaba671c72c8b4907c255765653d3935b8adcc4302d9f7bcbc52d4e2c6&=&format=webp")
             embed.set_image(url="https://media.discordapp.net/attachments/1116372596406096003/1391370484397899877/mc5.jpg?ex=686ba63d&is=686a54bd&hm=fbcbe3a1f3882b9671299eb0e2cf17c80c4838623429054c7e74533173ab12c2&=&format=webp&width=1516&height=856")
-            embed.add_field(name="IP", value=f"HLBOfficial.aternos.me:51910", inline=False)
-            embed.add_field(name="Port", value="51910", inline=False)
+            
+
+            #IP
+            embed.add_field(name="IP", value=f"HLBOfficial.aternos.me:51910", inline=True)
+
+            # Online Players
+            embed.add_field(name="Online Players", value=status_data.get("players", {}).get("online", 0), inline=True)
+
+            #Blank spacer
+            embed.add_field(name="",
+                value="",
+                inline=True)
+
+            #Port
+            embed.add_field(name="Port", value="51910", inline=True)
             # embed.add_field(name="Port", value=status_data.get("port", "N/A"), inline=False)
-            embed.add_field(name="Status", value=server_status, inline=False)
-            embed.add_field(name="Online Players", value=status_data.get("players", {}).get("online", 0), inline=False)
-            embed.add_field(name="Max Players", value=status_data.get("players", {}).get("max", 0), inline=False)
-            # embed.add_field(name="Version", value=status_data.get("version", "N/A"), inline=False)
+
+            # Max Players
+            embed.add_field(name="Max Players", value=status_data.get("players", {}).get("max", 0), inline=True)
+
+            #Blank spacer
+            embed.add_field(name="",
+                value="",
+                inline=False)
+
+            # Status
+            embed.add_field(name="Status", value=server_status, inline=True)
+
+           #Blank spacer
+            embed.add_field(name="",
+                value="",
+                inline=False)
+
+            
+            
+
             embed_player_list=""
             player_list = status_data.get("players", {}).get("list", [])
             if player_list:
@@ -61,7 +92,7 @@ class MinecraftStatusManager(commands.Cog):
             print(f"[MINECRAFT] Exception in generate_status_embed: {e}", flush=True)
             return None
 
-    @tasks.loop(seconds=5)
+    @tasks.loop(seconds=30)
     async def server_status_bulletin(self):
         print("[MINECRAFT] Running server_status_bulletin task...", flush=True)
         destination_channel = await self.client.fetch_channel(DESTINATION_CHANNEL_ID_DEV)
@@ -111,7 +142,7 @@ class MinecraftStatusManager(commands.Cog):
             except discord.Forbidden:
                 await interaction.followup.send("I do not have permission to send messages in this channel.")
                 print("[MINECRAFT] Missing permissions to send embed in /mcstatus.", flush=True)
-            await interaction.followup.send("The Minecraft server is currently online.")
+            
         else:
             print("[MINECRAFT] Failed to generate status embed for /mcstatus command.", flush=True)
             await interaction.followup.send("Failed to generate status embed for the Minecraft server.")
