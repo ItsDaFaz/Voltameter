@@ -30,21 +30,12 @@ class MinecraftStatusManager(commands.Cog):
         print("[MINECRAFT] Generating status embed...", flush=True)
         try:
             server_status = "Online" if status_data.get("online", False) else "Offline"
-
-            embed = discord.Embed(
-                title="HLB Minecraft Server", 
-                color=discord.Color.from_str("#55FF55"))
-            embed.description = "HLB Minecraft offers monthly rewards based on your ranking on the server leaderboard. To keep things fair, staff members are not eligible for this reward. Conditions might apply."
-            port= status_data.get("port", "N/A")
-            embed.set_thumbnail(url="https://media.discordapp.net/attachments/1381847390784327712/1381847390964944897/channels4_profile.jpg?ex=686b482b&is=6869f6ab&hm=e0cd5dcaba671c72c8b4907c255765653d3935b8adcc4302d9f7bcbc52d4e2c6&=&format=webp")
-            embed.set_image(url="https://media.discordapp.net/attachments/1116372596406096003/1391370484397899877/mc5.jpg?ex=686ba63d&is=686a54bd&hm=fbcbe3a1f3882b9671299eb0e2cf17c80c4838623429054c7e74533173ab12c2&=&format=webp&width=1516&height=856")
-            embed.add_field(name="IP", value=f"HLBOfficial.aternos.me:51910", inline=False)
-            embed.add_field(name="Port", value="51910", inline=False)
-            # embed.add_field(name="Port", value=status_data.get("port", "N/A"), inline=False)
-            embed.add_field(name="Status", value=server_status, inline=False)
-            embed.add_field(name="Online Players", value=status_data.get("players", {}).get("online", 0), inline=False)
-            embed.add_field(name="Max Players", value=status_data.get("players", {}).get("max", 0), inline=False)
-            # embed.add_field(name="Version", value=status_data.get("version", "N/A"), inline=False)
+            embed_description = f"HLB Minecraft offers monthly rewards based on your ranking on the server leaderboard. To keep things fair, staff members are not eligible for this reward. Conditions might apply.\n"
+            embed_description+="\n**Server IP:** `HLBOfficial.aternos.me:51910`\n"
+            embed_description+="\n**Port:** `51910`\n"
+            embed_description += f"\n**Status:** {server_status}\n"
+            embed_description += f"\n**Online Players:** {status_data.get('players', {}).get('online', 0)}\n"
+            embed_description += f"\n**Max Players:** {status_data.get('players', {}).get('max', 0)}\n"
             embed_player_list=""
             player_list = status_data.get("players", {}).get("list", [])
             if player_list:
@@ -53,8 +44,19 @@ class MinecraftStatusManager(commands.Cog):
             else:
                 embed_player_list = "No players online"
             
-            embed.add_field(name="Players currently online: ", value=embed_player_list, inline=False)
-
+            embed_description+= f"\n**Players currently online:**\n{embed_player_list}\n"
+            embed = discord.Embed(
+                title="HLB Minecraft Server", 
+                color=discord.Color.from_str(EMBED_COLOR),
+                description=embed_description
+            )
+            
+            embed.set_thumbnail(url="https://media.discordapp.net/attachments/1381847390784327712/1381847390964944897/channels4_profile.jpg?ex=686b482b&is=6869f6ab&hm=e0cd5dcaba671c72c8b4907c255765653d3935b8adcc4302d9f7bcbc52d4e2c6&=&format=webp")
+            embed.set_image(url="https://media.discordapp.net/attachments/1116372596406096003/1391370484397899877/mc5.jpg?ex=686ba63d&is=686a54bd&hm=fbcbe3a1f3882b9671299eb0e2cf17c80c4838623429054c7e74533173ab12c2&=&format=webp&width=1516&height=856")
+            
+            
+            
+            
             embed.set_footer(text="© Codebound")
             return embed
         except Exception as e:
