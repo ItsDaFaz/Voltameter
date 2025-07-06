@@ -4,7 +4,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 import requests
 
-from config import MINECRAFT_STATUS_URL, DESTINATION_CHANNEL_ID_DEV, EMBED_COLOR
+from config import MINECRAFT_STATUS_URL, MINECRAFT_CHANNEL_ID, DESTINATION_CHANNEL_ID_DEV, EMBED_COLOR
 
 class MinecraftStatusManager(commands.Cog):
     def __init__(self, client):
@@ -36,7 +36,7 @@ class MinecraftStatusManager(commands.Cog):
             embed_description += f"\n**Status:** `{server_status}`"
             embed_description += f"\n**Online Players:** `{status_data.get('players', {}).get('online', 0)}`"
             embed_description += f"\n**Max Players:** `{status_data.get('players', {}).get('max', 0)}`\n"
-            embed_player_list="\n"
+            embed_player_list=""
             player_list = status_data.get("players", {}).get("list", [])
             if player_list:
                 for idx,player in enumerate(player_list):
@@ -66,7 +66,7 @@ class MinecraftStatusManager(commands.Cog):
     @tasks.loop(seconds=30)
     async def server_status_bulletin(self):
         print("[MINECRAFT] Running server_status_bulletin task...", flush=True)
-        destination_channel = await self.client.fetch_channel(DESTINATION_CHANNEL_ID_DEV)
+        destination_channel = await self.client.fetch_channel(MINECRAFT_CHANNEL_ID)
         print(f"[MINECRAFT] Fetched destination channel: {destination_channel}", flush=True)
         status_data = await self.fetch_status_from_api()
         if status_data:
