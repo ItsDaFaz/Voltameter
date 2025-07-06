@@ -35,7 +35,9 @@ class MinecraftStatusManager(commands.Cog):
                 title="HLB Minecraft Server", 
                 color=discord.Color.from_str("#55FF55"))
             embed.description = "Here is the current server joining and status info:"
-            embed.add_field(name="IP", value=status_data.get("ip", "N/A"), inline=False)
+            embed.set_thumbnail(url="https://media.discordapp.net/attachments/1116372596406096003/1391370181900763226/thumb-400-minecraft-5754.png?ex=686ba5f5&is=686a5475&hm=df616f68bb7d43f98acf2d4fe24e069720cf0ac468be14ad770d8e879425e7e7&=&format=webp&quality=lossless")
+            embed.set_image(url="https://media.discordapp.net/attachments/1116372596406096003/1391370484397899877/mc5.jpg?ex=686ba63d&is=686a54bd&hm=fbcbe3a1f3882b9671299eb0e2cf17c80c4838623429054c7e74533173ab12c2&=&format=webp&width=1516&height=856")
+            embed.add_field(name="IP", value="HLBOfficial.aternos.me:51910", inline=False)
             embed.add_field(name="Port", value=status_data.get("port", "N/A"), inline=False)
             embed.add_field(name="Status", value=server_status, inline=False)
             embed.add_field(name="Online Players", value=status_data.get("players", {}).get("online", 0), inline=False)
