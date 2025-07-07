@@ -44,7 +44,7 @@ class MinecraftStatusManager(commands.Cog):
             else:
                 embed_player_list = "No players online"
             
-            embed_description+= f"\n**Players currently online:**{embed_player_list}\n"
+            embed_description+= f"\n**Players currently online: **{embed_player_list}\n"
             embed = discord.Embed(
                 title="HLB Minecraft Server", 
                 color=discord.Color.from_str(EMBED_COLOR),
