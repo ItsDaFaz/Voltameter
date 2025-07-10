@@ -60,7 +60,7 @@ class SettingsCog(commands.Cog):
         
 
     def register_commands(self):
-        @self.client.tree.command(name="settings", description="Post the interactive settings menu.")
+        @app_commands.command(name="settings", description="Post the interactive settings menu.")
         @app_commands.checks.has_permissions(administrator=True)
         async def settings_command(self, interaction: discord.Interaction) -> None:
             if not interaction.guild:
