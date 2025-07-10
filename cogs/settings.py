@@ -56,31 +56,29 @@ class SettingsCog(commands.Cog):
     def __init__(self, client, db_manager: Any):
         self.client = client
         self.db_manager = db_manager
-        self.register_commands()
-        
-
-    def register_commands(self):
-        @app_commands.command(name="settings", description="Post the interactive settings menu.")
-        @app_commands.checks.has_permissions(administrator=True)
-        async def settings_command(self, interaction: discord.Interaction) -> None:
-            if not interaction.guild:
-                await interaction.response.send_message("This command can only be used in a server (guild) context.", ephemeral=True)
-                return
-            db_guild = await self.db_manager.get_guild(interaction.guild.id)
-            config = db_guild.configs if db_guild and db_guild.configs else generate_default_guild_configs(interaction.guild)
-            dest_channel = config.get('destination_channel_id')
-            text_mult = config.get('text_multiplier')
-            voice_mult = config.get('in_voice_boost_multiplier')
-            embed = discord.Embed(
-                title="Guild Settings",
-                description="Use the dropdown below to configure settings.\n\n"
-                            f"**Destination Channel:** <#{dest_channel if dest_channel else 'Not set'}>\n"
-                            f"**Text Multiplier:** `{text_mult if text_mult is not None else 'Not set'}`\n"
-                            f"**In-Voice Multiplier:** `{voice_mult if voice_mult is not None else 'Not set'}`\n",
-                color=discord.Color.blurple()
-            )
-            view = SettingsView(config)
-            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+       
+    @app_commands.command(name="settings", description="Post the interactive settings menu.")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def settings_command(self, interaction: discord.Interaction):
+        pass
+        # if not interaction.guild:
+        #     await interaction.response.send_message("This command can only be used in a server (guild) context.", ephemeral=True)
+        #     return
+        # db_guild = await self.db_manager.get_guild(interaction.guild.id)
+        # config = db_guild.configs if db_guild and db_guild.configs else generate_default_guild_configs(interaction.guild)
+        # dest_channel = config.get('destination_channel_id')
+        # text_mult = config.get('text_multiplier')
+        # voice_mult = config.get('in_voice_boost_multiplier')
+        # embed = discord.Embed(
+        #     title="Guild Settings",
+        #     description="Use the dropdown below to configure settings.\n\n"
+        #                 f"**Destination Channel:** <#{dest_channel if dest_channel else 'Not set'}>\n"
+        #                 f"**Text Multiplier:** `{text_mult if text_mult is not None else 'Not set'}`\n"
+        #                 f"**In-Voice Multiplier:** `{voice_mult if voice_mult is not None else 'Not set'}`\n",
+        #     color=discord.Color.blurple()
+        # )
+        # view = SettingsView(config)
+        # await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
 async def setup(bot: commands.Bot):
     from cogs.db import DBManager
