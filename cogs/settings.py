@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional
 import asyncio
 from discord import app_commands
 from config import EMBED_COLOR
+from cogs.db import DBManager
 class SettingsSelect(discord.ui.Select):
     def __init__(self, config: Dict[str, Any]):
         options = [
@@ -82,7 +83,7 @@ class SettingsCog(commands.Cog):
             view = SettingsView(config)
             await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
-async def setup(bot: commands.Bot):
-    from cogs.db import DBManager
-    db_manager = bot.get_cog("DBManager")
-    await bot.add_cog(SettingsCog(bot, db_manager))
+async def setup(client):
+    
+    db_manager = client.get_cog("DBManager")
+    await client.add_cog(SettingsCog(client, db_manager))

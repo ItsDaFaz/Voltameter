@@ -55,13 +55,13 @@ class VoltameterBot(commands.Bot):
 
     async def setup_hook(self):
         # Load cogs as extensions (all managers are now handled in cogs)
+        await self.load_extension('cogs.db')
         await self.load_extension('leaderboard.leaderboard')
         await self.load_extension('cogs.commands')
         await self.load_extension('cogs.voice')
         await self.load_extension('cogs.messages')
-        await self.load_extension('cogs.db')
-        await self.load_extension('cogs.settings')
         await self.load_extension('cogs.minecraft')
+        await self.load_extension('cogs.settings')
         await self.tree.sync()
 
 bot = VoltameterBot()
