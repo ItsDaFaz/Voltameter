@@ -1,9 +1,9 @@
 from discord.ext import tasks, commands
-from db.models import Guild as DBGuild, Member as DBMember, Message as DBMessage
-from sqlalchemy import select, delete
+from db.models import Guild as DBGuild, Member as DBMember, Message as DBMessage, member_guild_association
+from sqlalchemy import select, delete, and_
 from datetime import datetime, timedelta, timezone
 from utils.helpers import async_db_retry
-
+from sqlalchemy.dialects.postgresql import insert
 class DBManager(commands.Cog):
     def __init__(self, client, is_prod, SessionLocal):
         self.client = client
@@ -40,15 +40,36 @@ class DBManager(commands.Cog):
     @async_db_retry()
     async def get_member(self, member_id, guild_id):
         async with self.SessionLocal() as session:
-            return await session.scalar(
-                select(DBMember).where(
+            # New query using association table
+            stmt = select(DBMember).join(
+                member_guild_association,
+                DBMember.id == member_guild_association.c.member_id
+            ).where(
+                and_(
                     DBMember.id == member_id,
-                    DBMember.guild_id.contains([guild_id])
+                    member_guild_association.c.guild_id == guild_id
                 )
             )
+            return await session.scalar(stmt)
     @async_db_retry()
     async def add_message(self, message):
         async with self.SessionLocal() as session:
+            # First ensure member exists with guild association
+            member = await self.get_member(message.author.id, message.guild.id)
+            if not member:
+                # Create member and association
+                member = DBMember(id=message.author.id)
+                session.add(member)
+                await session.flush()
+                
+                # PostgreSQL-specific upsert
+                stmt = insert(member_guild_association).values(
+                    member_id=member.id,
+                    guild_id=message.guild.id
+                ).on_conflict_do_nothing()
+                await session.execute(stmt)
+            
+            # Then add the message
             db_message = DBMessage(
                 id=message.id,
                 author_id=message.author.id,
@@ -57,6 +78,7 @@ class DBManager(commands.Cog):
             )
             session.add(db_message)
             await session.commit()
+
     
     @async_db_retry()
     async def get_guild_config(self, guild_id, key=None):
@@ -100,8 +122,6 @@ class DBManager(commands.Cog):
                 db_guild = await session.scalar(select(DBGuild).where(DBGuild.id == guild.id))
                 if not db_guild:
                     print(f"Guild {guild.name} ({guild.id}) not found in database, adding it.")
-                    id = guild.id
-                    name = guild.name
                     default_configs = {
                         "admin_role_id_list": [],
                         "text_channels_list": [],
@@ -112,19 +132,37 @@ class DBManager(commands.Cog):
                         "in_voice_boost_multiplier": 2
                     }
                     new_guild = DBGuild(
-                        id=id,
-                        name=name,
+                        id=guild.id,
+                        name=guild.name,
                         configs=default_configs
                     )
-                    print("New guild created:", new_guild)
                     session.add(new_guild)
+                    
+                    # Add all current members to association table
+                    for member in guild.members:
+                        if not member.bot:
+                            # Check if member exists first
+                            existing_member = await session.scalar(
+                                select(DBMember).where(DBMember.id == member.id)
+                            )
+                            if not existing_member:
+                                existing_member = DBMember(id=member.id)
+                                session.add(existing_member)
+                                await session.flush()
+                            
+                            # PostgreSQL-specific upsert
+                            stmt = insert(member_guild_association).values(
+                                member_id=member.id,
+                                guild_id=guild.id
+                            ).on_conflict_do_nothing()
+                            await session.execute(stmt)
+                    
                     await session.commit()
+                    print(f"Added new guild {guild.name} with members")
                 else:
                     print(f"Guild already exists in DB: {db_guild}")
         except Exception as e:
             print(f"Exception in add_guild: {e}", flush=True)
-            # print(traceback.format_exc(), flush=True)
-
     @tasks.loop(hours=24)
     @async_db_retry()
     async def cleanup_old_messages(self):

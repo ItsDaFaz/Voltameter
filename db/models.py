@@ -1,28 +1,44 @@
-from sqlalchemy import Column, Integer, DateTime, Boolean, ForeignKey, BigInteger, String
+from sqlalchemy import Column, Integer, DateTime, Boolean, ForeignKey, BigInteger, String, Table
 from sqlalchemy.orm import relationship, declarative_base
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy import ARRAY
 Base = declarative_base()
 
-
+# Add this association table
+member_guild_association = Table(
+    'member_guild_association',
+    Base.metadata,
+    Column('member_id', BigInteger, ForeignKey('members.id'), primary_key=True),
+    Column('guild_id', BigInteger, ForeignKey('guilds.id'), primary_key=True)
+)
 class Guild(Base):
-    __tablename__ = 'guilds'
+    __tablename__ = "guilds"
     id = Column(BigInteger, primary_key=True, index=True)
     name = Column(String, nullable=False)
-    config = Column(MutableDict.as_mutable(JSONB), default=dict)  # Consolidated config field
-    members = relationship('Member', back_populates='guild')
-    messages = relationship('Message', back_populates='guild')
+    config = Column(MutableDict.as_mutable(JSONB), default=dict)
     
+    # Updated relationship (now many-to-many)
+    members = relationship(
+        "Member",
+        secondary=member_guild_association,
+        back_populates="guilds",  # Matches Member.guilds
+    )
+    messages = relationship("Message", back_populates="guild")
+
 
 class Member(Base):
-    __tablename__ = 'members'
+    __tablename__ = "members"
     id = Column(BigInteger, primary_key=True, index=True)
-    guild_id = Column(ARRAY(BigInteger), nullable=False)  # Now an array of BigIntegers
-    messages = relationship('Message', back_populates='author')
-    # Removed ForeignKey constraint from guild_id, as it is now an array
-    # Relationship to Guild may need to be rethought, as a member can now belong to multiple guilds
-    # guild = relationship('Guild', back_populates='members')
+    
+    # Removed guild_id (now handled by association table)
+    guilds = relationship(
+        "Guild",
+        secondary=member_guild_association,
+        back_populates="members",  # Matches Guild.members
+    )
+    messages = relationship("Message", back_populates="author")
+
 
 class Message(Base):
     __tablename__ = 'messages'

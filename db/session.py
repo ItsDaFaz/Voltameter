@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlalchemy.dialects.postgresql import insert
 
 load_dotenv(override=True)  # Load environment variables from .env file
 DB_URL = os.getenv("DB_URL", "sqlite+aiosqlite:///./test.db")
