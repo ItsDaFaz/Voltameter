@@ -10,7 +10,7 @@ from config import  DESTINATION_CHANNEL_ID as DESTINATION_CHANNEL_ID, ANNOUNCEME
 from utils.helpers import escape_markdown, async_db_retry
 import math
 from db.session import get_engine, get_session_maker
-from db.models import Member as DBMember, Message as DBMessage
+from db.models import Member as DBMember, Message as DBMessage, member_guild_association
 from sqlalchemy import select, func
 from sqlalchemy.dialects.postgresql import ARRAY
 from utils.cache import global_cache
@@ -120,9 +120,11 @@ class LeaderboardManager(commands.Cog):
         """
         async with self.SessionLocal() as session:
             try:
-                from sqlalchemy import literal
+                # Get members associated with this guild through the association table
                 members = await session.scalars(
-                    select(DBMember).where(DBMember.guild_id.contains([guild.id]))
+                    select(DBMember)
+                    .join(member_guild_association, DBMember.id == member_guild_association.c.member_id)
+                    .where(member_guild_association.c.guild_id == guild.id)
                 )
                 db_members = members.all()
             except Exception as e:

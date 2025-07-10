@@ -90,6 +90,9 @@ class MessageCog(commands.Cog):
             
     @async_db_retry()
     async def handle_on_message_delete(self, message: Message):
+        if message.author.bot:
+            #print(f"Message from bot {message.author.name} deleted, ignoring.", flush=True)
+            return
         if self.is_prod:
             async with self.SessionLocal() as session:
                 try:
