@@ -40,7 +40,12 @@ class DBManager(commands.Cog):
     @async_db_retry()
     async def get_member(self, member_id, guild_id):
         async with self.SessionLocal() as session:
-            return await session.scalar(select(DBMember).where(DBMember.id == member_id, DBMember.guild_id == guild_id))
+            return await session.scalar(
+                select(DBMember).where(
+                    DBMember.id == member_id,
+                    DBMember.guild_id.contains([guild_id])
+                )
+            )
     @async_db_retry()
     async def add_message(self, message):
         async with self.SessionLocal() as session:

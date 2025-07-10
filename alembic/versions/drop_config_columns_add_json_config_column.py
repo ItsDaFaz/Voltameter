@@ -2,8 +2,8 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-revision = 'drop_config_columns_add_json_config_column'
-down_revision = 'add_guild_multipliers_and_member_guildid_array'
+revision = 'drop_config_columns'
+down_revision = 'add_guild_multipliers'
 branch_labels = None
 depends_on = None
 

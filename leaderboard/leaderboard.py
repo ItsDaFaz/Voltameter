@@ -12,6 +12,7 @@ import math
 from db.session import get_engine, get_session_maker
 from db.models import Member as DBMember, Message as DBMessage
 from sqlalchemy import select, func
+from sqlalchemy.dialects.postgresql import ARRAY
 from utils.cache import global_cache
 
 class LeaderboardManager(commands.Cog):
@@ -121,7 +122,7 @@ class LeaderboardManager(commands.Cog):
             try:
                 from sqlalchemy import literal
                 members = await session.scalars(
-                    select(DBMember).where(literal(guild.id).op('= ANY')(DBMember.guild_id))
+                    select(DBMember).where(DBMember.guild_id.contains([guild.id]))
                 )
                 db_members = members.all()
             except Exception as e:
@@ -539,7 +540,7 @@ async def setup(client):
 
      # Register the instance with the webserver
     from web.webserver import webserver
-    webserver.set_leaderboard_manager(cog)   
+    webserver.set_leaderboard_manager(cog)
 
 
 

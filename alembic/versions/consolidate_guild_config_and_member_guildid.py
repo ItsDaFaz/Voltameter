@@ -6,21 +6,21 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'consolidate_guild_config_and_member_guildid'
-down_revision = 'drop_config_columns_add_json_config_column'  # Set this to the previous migration's revision ID
+revision = 'consolidate_guild_config'
+down_revision = 'drop_config_columns'  # Set this to the previous migration's revision ID
 branch_labels = None
 depends_on = None
 
 def upgrade():
     # Remove old config columns from guilds
     with op.batch_alter_table('guilds') as batch_op:
-        batch_op.drop_column('admin_role_id_list')
-        batch_op.drop_column('text_channels_list')
-        batch_op.drop_column('forum_channels_list')
-        batch_op.drop_column('destination_channel_id')
-        batch_op.drop_column('destination_channel_id_dev')
-        batch_op.drop_column('text_multiplier')
-        batch_op.drop_column('in_voice_boost_multiplier')
+        # batch_op.drop_column('admin_role_id_list')
+        # batch_op.drop_column('text_channels_list')
+        # batch_op.drop_column('forum_channels_list')
+        # batch_op.drop_column('destination_channel_id')
+        # batch_op.drop_column('destination_channel_id_dev')
+        # batch_op.drop_column('text_multiplier')
+        # batch_op.drop_column('in_voice_boost_multiplier')
         batch_op.add_column(sa.Column('configs', postgresql.JSONB(astext_type=sa.Text()), nullable=True))
 
     # Change members.guild_id from ARRAY(BigInteger) to BigInteger
