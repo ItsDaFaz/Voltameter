@@ -10,8 +10,8 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = 'add_guild_multipliers_and_member_guildid_array'
-#down_revision = 'e9a8f844d9a0'
-down_revision = None
+down_revision = 'e9a8f844d9a0'
+#down_revision = None
 branch_labels = None
 depends_on = None
 
@@ -27,8 +27,8 @@ def upgrade():
     op.execute("UPDATE members SET guild_id_array = ARRAY[guild_id]")
 
     # Drop the old foreign key constraint if it exists
-    with op.batch_alter_table('members') as batch_op:
-        batch_op.drop_constraint('members_guild_id_fkey', type_='foreignkey')
+    # with op.batch_alter_table('members') as batch_op:
+    #     batch_op.drop_constraint('members_guild_id_fkey', type_='foreignkey')
 
     # Drop the old column and rename the new one
     op.drop_column('members', 'guild_id')
