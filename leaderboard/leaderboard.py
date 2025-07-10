@@ -12,6 +12,7 @@ import math
 from db.session import get_engine, get_session_maker
 from db.models import Member as DBMember, Message as DBMessage
 from sqlalchemy import select, func
+from sqlalchemy.dialects.postgresql import ARRAY
 from utils.cache import global_cache
 
 class LeaderboardManager(commands.Cog):
@@ -119,7 +120,10 @@ class LeaderboardManager(commands.Cog):
         """
         async with self.SessionLocal() as session:
             try:
-                members = await session.scalars(select(DBMember).where(DBMember.guild_id == guild.id))
+                from sqlalchemy import literal
+                members = await session.scalars(
+                    select(DBMember).where(DBMember.guild_id.contains([guild.id]))
+                )
                 db_members = members.all()
             except Exception as e:
                 print(f"Error fetching members from DB: {e}")
@@ -377,9 +381,9 @@ class LeaderboardManager(commands.Cog):
                 print("[Leaderboard] Skipping sending leaderboard embed in development mode.", flush=True)
             
             #Role assignment logic
-            mr_electricity_role: Optional[Role] = discord.utils.get(guild.roles, id=MR_ELECTRICITY_ROLE_ID)
+            mr_electricity_role: Role | None = discord.utils.get(guild.roles, id=MR_ELECTRICITY_ROLE_ID)
 
-            high_voltage_role: Optional[Role] = discord.utils.get(guild.roles, id=HIGH_VOLTAGE_ROLE_ID)
+            high_voltage_role: Role | None = discord.utils.get(guild.roles, id=HIGH_VOLTAGE_ROLE_ID)
             
             if not high_voltage_role or not mr_electricity_role:
                 print("Required roles not found")
@@ -536,7 +540,7 @@ async def setup(client):
 
      # Register the instance with the webserver
     from web.webserver import webserver
-    webserver.set_leaderboard_manager(cog)   
+    webserver.set_leaderboard_manager(cog)
 
 
 

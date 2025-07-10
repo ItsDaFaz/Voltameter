@@ -14,6 +14,7 @@ from db.init_db import init_models
 from db.session import get_engine, get_session_maker
 from db.models import Guild as DBGuild
 from sqlalchemy import select
+from utils.helpers import generate_default_guild_configs
 
 load_dotenv(override=True)
 TOKEN = os.getenv("TOKEN")
@@ -59,6 +60,7 @@ class VoltameterBot(commands.Bot):
         await self.load_extension('cogs.voice')
         await self.load_extension('cogs.messages')
         await self.load_extension('cogs.db')
+        await self.load_extension('cogs.settings')
         await self.load_extension('cogs.minecraft')
         await self.tree.sync()
 
@@ -66,6 +68,8 @@ bot = VoltameterBot()
 
 # Remove all event handlers except startup logic
 # All event logic is now handled in cogs via @commands.Cog.listener()
+
+# Running the web server and bot concurrently
 
 async def run_web():
     config = uvicorn.Config(app=fastapi_app, host="0.0.0.0", port=8080, log_level="info")
