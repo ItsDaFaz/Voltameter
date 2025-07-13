@@ -8,7 +8,7 @@ from discord import app_commands
 from config import EMBED_COLOR
 from cogs.db import DBManager
 class SettingsSelect(discord.ui.Select):
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, configs: Dict[str, Any]):
         options = [
             discord.SelectOption(label="Destination Channel", value="destination_channel_id"),
             discord.SelectOption(label="Text Multiplier", value="text_multiplier"),
@@ -16,7 +16,7 @@ class SettingsSelect(discord.ui.Select):
             # Add more options as needed
         ]
         super().__init__(placeholder="Choose a setting to configure...", min_values=1, max_values=1, options=options)
-        self.config = config
+        self.configs = configs
 
     async def callback(self, interaction: discord.Interaction) -> None:
         selected = self.values[0]
@@ -28,9 +28,9 @@ class SettingsSelect(discord.ui.Select):
         if embed is None:
             embed = discord.Embed(title="Guild Settings", color=discord.Color.blurple())
         # Defensive: get config values safely
-        dest_channel = self.config.get('destination_channel_id')
-        text_mult = self.config.get('text_multiplier')
-        voice_mult = self.config.get('in_voice_boost_multiplier')
+        dest_channel = self.configs.get('destination_channel_id')
+        text_mult = self.configs.get('text_multiplier')
+        voice_mult = self.configs.get('in_voice_boost_multiplier')
         if selected == "destination_channel_id":
             embed.description = (
                 f"**Destination Channel**\nCurrent: <#{dest_channel if dest_channel else 'Not set'}>\nSelect a new channel below."
