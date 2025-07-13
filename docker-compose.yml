@@ -1,13 +1,14 @@
+version: '3'
 services:
-  volt: 
+  volt:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: volt
     environment:
-      - TOKEN={TOKEN}
-      - ENVIRONMENT={ENVIRONMENT}
-      - CRON_SECRET={CRON_SECRET}
-      - DB_URL={DB_URL}
+      - TOKEN=${TOKEN}
+      - ENVIRONMENT=${ENVIRONMENT}
+      - CRON_SECRET=${CRON_SECRET}
+      - DB_URL=${DB_URL}
     ports:
       - "8080:8080"

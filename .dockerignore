@@ -1,0 +1,8 @@
+.git
+__pycache__
+*.pyc
+*.db
+.env
+venv/
+alembic.ini
+tests/
