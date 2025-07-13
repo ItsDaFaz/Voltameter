@@ -16,7 +16,7 @@ class Guild(Base):
     __tablename__ = "guilds"
     id = Column(BigInteger, primary_key=True, index=True)
     name = Column(String, nullable=False)
-    config = Column(MutableDict.as_mutable(JSONB), default=dict)
+    configs = Column(MutableDict.as_mutable(JSONB), default=dict)
     
     # Updated relationship (now many-to-many)
     members = relationship(
