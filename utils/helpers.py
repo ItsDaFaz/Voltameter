@@ -3,7 +3,7 @@ import asyncio
 import functools
 from sqlalchemy.exc import OperationalError, InterfaceError
 import asyncpg
-
+import discord
 # String utility functions
 def escape_markdown(text: str) -> str:
     return re.sub(r'([_*~`|>])', r'\\\\1', text)
@@ -38,6 +38,42 @@ def async_db_retry(max_attempts=3, delay=2):
                 raise Exception("Database operation failed after all retry attempts, but no exception was captured.")
         return wrapper
     return decorator
+
+async def fetch_role_from_id_list(guild: discord.Guild, role_ids: list[int]) -> list[discord.Role]:
+    """
+    Fetch roles from a list of role IDs in a guild.
+    Returns a list of discord.Role objects.
+    """
+    roles = []
+    for role_id in role_ids:
+        role = guild.get_role(role_id)
+        if role:
+            roles.append(role)
+    return roles
+
+async def fetch_channel_from_id_list(guild: discord.Guild, channel_ids: list[int]) -> list[discord.TextChannel]:
+    """
+    Fetch text channels from a list of channel IDs in a guild.
+    Returns a list of discord.TextChannel objects.
+    """
+    channels = []
+    for channel_id in channel_ids:
+        channel = guild.get_channel(channel_id)
+        if isinstance(channel, discord.TextChannel):
+            channels.append(channel)
+    return channels
+
+async def fetch_forum_channel_from_id_list(guild: discord.Guild, channel_ids: list[int]) -> list[discord.ForumChannel]:
+    """
+    Fetch forum channels from a list of channel IDs in a guild.
+    Returns a list of discord.ForumChannel objects.
+    """
+    channels = []
+    for channel_id in channel_ids:
+        channel = guild.get_channel(channel_id)
+        if isinstance(channel, discord.ForumChannel):
+            channels.append(channel)
+    return channels
 
 def generate_default_guild_configs(guild):
     """

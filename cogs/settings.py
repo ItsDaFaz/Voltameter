@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from db.models import Guild as DBGuild
-from utils.helpers import generate_default_guild_configs
+from utils.helpers import generate_default_guild_configs, fetch_role_from_id_list, fetch_channel_from_id_list, fetch_forum_channel_from_id_list
 from typing import Any, Dict, Optional
 import asyncio
 from discord import app_commands
@@ -52,6 +52,7 @@ class SettingsView(discord.ui.View):
     def __init__(self, config: Dict[str, Any]):
         super().__init__(timeout=None)
         self.add_item(SettingsSelect(config))
+        self.add_item(discord.ui.Button(label="Main Menu", style=discord.ButtonStyle.blurple, custom_id="main_menu"))
 
 class SettingsCog(commands.Cog):
     def __init__(self, client, db_manager: Any):
@@ -71,12 +72,32 @@ class SettingsCog(commands.Cog):
             dest_channel = config.get('destination_channel_id')
             text_mult = config.get('text_multiplier')
             voice_mult = config.get('in_voice_boost_multiplier')
+            admin_role_ids_db = config.get('admin_role_id_list', [])
+            admin_roles = await fetch_role_from_id_list(interaction.guild, admin_role_ids_db)
+            text_channels_db = config.get('text_channels_list', [])
+            text_channels = await fetch_channel_from_id_list(interaction.guild, text_channels_db)
+            forum_channels_db = config.get('forum_channels_list', [])
+            forum_channels = await fetch_forum_channel_from_id_list(interaction.guild, forum_channels_db)
+
+            # Print debug information
+            print(f"[SettingsCog] Guild: {interaction.guild.name} ({interaction.guild.id})")
+            print(f"[SettingsCog] Destination Channel: {dest_channel}")
+            print(f"[SettingsCog] Text Multiplier: {text_mult}")
+            print(f"[SettingsCog] In-Voice Multiplier: {voice_mult}")
+            print(f"[SettingsCog] Admin Roles: {', '.join([role.name for role in admin_roles]) if admin_roles else 'None'}")
+            print(f"[SettingsCog] Text Channels: {', '.join([channel.name for channel in text_channels]) if text_channels else 'None'}")
+            print(f"[SettingsCog] Forum Channels: {', '.join([channel.name for channel in forum_channels]) if forum_channels else 'None'}") 
+
             embed = discord.Embed(
                 title="Guild Settings",
                 description="Use the dropdown below to configure settings.\n\n"
                             f"**Destination Channel:** <#{dest_channel if dest_channel else 'Not set'}>\n"
                             f"**Text Multiplier:** `{text_mult if text_mult is not None else 'Not set'}`\n"
-                            f"**In-Voice Multiplier:** `{voice_mult if voice_mult is not None else 'Not set'}`\n",
+                            f"**In-Voice Multiplier:** `{voice_mult if voice_mult is not None else 'Not set'}`\n"
+                            f"**Admin Roles:** {', '.join([f'<@&{role.name}>' for role in admin_roles]) if admin_roles else 'None'}\n"
+                            f"**Text Channels:** {', '.join([f'<#{text_channel.name}>' for text_channel in text_channels]) if text_channels else 'None'}\n"
+                            f"**Forum Channels:** {', '.join([f'<#{forum_channel.name}>' for forum_channel in forum_channels]) if forum_channels else 'None'}"
+                            ,
                 color=discord.Color.blurple()
             )
             view = SettingsView(config)
