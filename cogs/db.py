@@ -114,6 +114,26 @@ class DBManager(commands.Cog):
             session.add(db_guild)
             await session.commit()
             return True
+        
+    @async_db_retry()
+    async def reset_guild_configs(self, guild_id):
+        async with self.SessionLocal() as session:
+            db_guild = await session.scalar(select(DBGuild).where(DBGuild.id == guild_id))
+            if not db_guild:
+                return False
+            # Reset to default configs
+            db_guild.configs = {
+                "admin_role_id_list": [],
+                "text_channels_list": [],
+                "forum_channels_list": [],
+                "destination_channel_id": None,
+                "destination_channel_id_dev": None,
+                "text_multiplier": 3,
+                "in_voice_boost_multiplier": 2
+            }
+            session.add(db_guild)
+            await session.commit()
+            return True
 
     @async_db_retry()
     async def add_guild(self, guild):
@@ -121,7 +141,7 @@ class DBManager(commands.Cog):
             async with self.SessionLocal() as session:
                 db_guild = await session.scalar(select(DBGuild).where(DBGuild.id == guild.id))
                 if not db_guild:
-                    print(f"Guild {guild.name} ({guild.id}) not found in database, adding it.")
+                    print(f"Guild {guild.name} ({guild.id}) not found in database, adding it.", flush=True)
                     default_configs = {
                         "admin_role_id_list": [],
                         "text_channels_list": [],
@@ -159,6 +179,21 @@ class DBManager(commands.Cog):
                     
                     await session.commit()
                     print(f"Added new guild {guild.name} with members")
+                elif db_guild.configs is None:
+                    print(f"{guild.name} config: {db_guild.configs}",flush=True)
+                    print(f"Guild {guild.name} ({guild.id}) found but configs are None, resetting to defaults.", flush=True)
+                    db_guild.configs = {
+                        "admin_role_id_list": [],
+                        "text_channels_list": [],
+                        "forum_channels_list": [],
+                        "destination_channel_id": None,
+                        "destination_channel_id_dev": None,
+                        "text_multiplier": 3,
+                        "in_voice_boost_multiplier": 2
+                    }
+                    session.add(db_guild)
+                    await session.commit()
+                    print(f"Reset configs for guild {guild.name} ({guild.id}) to defaults.")
                 else:
                     print(f"Guild already exists in DB: {db_guild}")
         except Exception as e:

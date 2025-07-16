@@ -6,8 +6,9 @@ from typing import Optional, List
 import discord
 from discord.ext import tasks, commands
 from discord import Guild, TextChannel, ForumChannel, Member, Embed, Color, Thread, Role, VoiceChannel
+from discord.utils import escape_markdown
 from config import  DESTINATION_CHANNEL_ID as DESTINATION_CHANNEL_ID, ANNOUNCEMENT_CHANNEL_ID, GUILD_ID, MR_ELECTRICITY_ROLE_ID, HIGH_VOLTAGE_ROLE_ID, ADMIN_ROLES_IDS, ADMIN_ROLES_IDS_ELECTRICITY, TEXT_CHANNEL_LIST, FORUM_CHANNEL_LIST, EMBED_DESCRIPTION, EMBED_TITLE, EMBED_COLOR, DESTINATION_CHANNEL_ID_DEV
-from utils.helpers import escape_markdown, async_db_retry
+from utils.helpers import async_db_retry
 import math
 from db.session import get_engine, get_session_maker
 from db.models import Member as DBMember, Message as DBMessage, member_guild_association
@@ -299,7 +300,7 @@ class LeaderboardManager(commands.Cog):
             memberName = escape_markdown(member.display_name)
             embed_content += f"`{idx+1}` **{memberName}** "
             if entry.get("is_mr_electricity") is True:
-                embed_content += "<:flashface:1390994542953627708> "
+                embed_content += "<:hlbLightbender:1394783806073868388> "
             embed_content += f" — `{total_volt}` volt"
             if in_voice_boost != 0:
                 embed_content += f"\t<:hlbInVoice:1385763040238112798> `+{in_voice_boost}`"
