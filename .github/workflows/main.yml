@@ -13,11 +13,11 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Set up environment variables
-      run: |
-        echo "TOKEN=${{ secrets.DISCORD_TOKEN }}" >> .env
-        echo "ENVIRONMENT=production" >> .env
-        echo "DB_URL=${{ secrets.DB_URL }}" >> .env
+    # - name: Set up environment variables
+    #   run: |
+    #     echo "TOKEN=${{ secrets.DISCORD_TOKEN }}" >> .env
+    #     echo "ENVIRONMENT=production" >> .env
+    #     echo "DB_URL=${{ secrets.DB_URL }}" >> .env
 
     - name: Build and Restart Docker Compose
       run: |
