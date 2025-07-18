@@ -7,7 +7,7 @@ on:
 jobs:
   deploy:
     # This is the key change: it tells the job to run on your droplet
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout Code
